@@ -1214,13 +1214,15 @@ function initRobots() {
       r.specs = { ...CONFIG.specs };
       player2Robot = r;
     } else {
+      const allyKey = i === 1 ? 'ally1' : 'ally2';
+      const mult = (typeof BOT_DIFFICULTIES !== 'undefined' && BOT_DIFFICULTIES[allyKey] !== undefined) ? BOT_DIFFICULTIES[allyKey] : (CONFIG.allyMultiplier || 0.8);
       r.specs = {
-        moveSpeed: CONFIG.specs.moveSpeed * CONFIG.allyMultiplier,
-        pickupSpeed: CONFIG.specs.pickupSpeed * CONFIG.allyMultiplier,
-        shotSpeed: CONFIG.specs.shotSpeed * CONFIG.allyMultiplier,
-        capacity: Math.max(3, Math.round(CONFIG.specs.capacity * CONFIG.allyMultiplier)),
-        accuracy: Math.round(CONFIG.specs.accuracy * CONFIG.allyMultiplier),
-        climbSpeed: CONFIG.specs.climbSpeed * CONFIG.allyMultiplier,
+        moveSpeed: CONFIG.specs.moveSpeed * mult,
+        pickupSpeed: CONFIG.specs.pickupSpeed * mult,
+        shotSpeed: CONFIG.specs.shotSpeed * mult,
+        capacity: Math.max(3, Math.round(CONFIG.specs.capacity * mult)),
+        accuracy: Math.round(CONFIG.specs.accuracy * mult),
+        climbSpeed: CONFIG.specs.climbSpeed * mult,
         climbAnchorTime: CONFIG.specs.climbAnchorTime || 2.0,
       };
     }
@@ -1248,13 +1250,15 @@ function initRobots() {
       r.specs = { ...CONFIG.specs };
       player2Robot = r;
     } else {
+      const rivalKey = `rival${i + 1}`;
+      const mult = (typeof BOT_DIFFICULTIES !== 'undefined' && BOT_DIFFICULTIES[rivalKey] !== undefined) ? BOT_DIFFICULTIES[rivalKey] : (CONFIG.rivalMultiplier || 0.8);
       r.specs = {
-        moveSpeed: CONFIG.specs.moveSpeed * CONFIG.rivalMultiplier,
-        pickupSpeed: CONFIG.specs.pickupSpeed * CONFIG.rivalMultiplier,
-        shotSpeed: CONFIG.specs.shotSpeed * CONFIG.rivalMultiplier,
-        capacity: Math.max(3, Math.round(CONFIG.specs.capacity * CONFIG.rivalMultiplier)),
-        accuracy: Math.round(CONFIG.specs.accuracy * CONFIG.rivalMultiplier),
-        climbSpeed: CONFIG.specs.climbSpeed * CONFIG.rivalMultiplier,
+        moveSpeed: CONFIG.specs.moveSpeed * mult,
+        pickupSpeed: CONFIG.specs.pickupSpeed * mult,
+        shotSpeed: CONFIG.specs.shotSpeed * mult,
+        capacity: Math.max(3, Math.round(CONFIG.specs.capacity * mult)),
+        accuracy: Math.round(CONFIG.specs.accuracy * mult),
+        climbSpeed: CONFIG.specs.climbSpeed * mult,
         climbAnchorTime: CONFIG.specs.climbAnchorTime || 2.0,
       };
     }
@@ -3531,6 +3535,15 @@ function updateResultsStatsUI() {
 }
 
 // ── 14. UI SETUP & ROBOT CONFIGURATION ───────────────────────────
+let BOT_DIFFICULTIES = {
+  ally1: 0.80,
+  ally2: 0.80,
+  rival1: 0.80,
+  rival2: 0.80,
+  rival3: 0.80
+};
+let currentSelectedBot = 'ally1';
+
 function calculateRobotVolumes() {
   const initL = parseFloat(document.getElementById('initDimL')?.value) || 45;
   const initW = parseFloat(document.getElementById('initDimW')?.value) || 45;
@@ -3539,57 +3552,164 @@ function calculateRobotVolumes() {
   const initVolEl = document.getElementById('initVolDisplay');
   if (initVolEl) initVolEl.textContent = initVol.toLocaleString() + ' cm³';
 
-  const finalL = parseFloat(document.getElementById('finalDimL')?.value) || 65;
-  const finalW = parseFloat(document.getElementById('finalDimW')?.value) || 50;
-  const finalH = parseFloat(document.getElementById('finalDimH')?.value) || 70;
+  const hasExp = document.querySelector('#hasExpansionToggle .toggle-btn.active')?.dataset.value === 'yes';
+  const axis = document.querySelector('#expansionAxisToggle .toggle-btn.active')?.dataset.axis || 'length';
+  const amount = parseFloat(document.getElementById('expansionAmount')?.value || 20);
+
+  let finalL = initL;
+  let finalW = initW;
+  let finalH = initH;
+
+  if (hasExp) {
+    if (axis === 'length') finalL = initL + amount;
+    else if (axis === 'width') finalW = initW + amount;
+    else if (axis === 'height') finalH = initH + amount;
+  }
+
   const finalVol = finalL * finalW * finalH;
+  const finalDimsEl = document.getElementById('finalDimsDisplay');
+  if (finalDimsEl) finalDimsEl.textContent = `${finalL} × ${finalW} × ${finalH} cm`;
   const finalVolEl = document.getElementById('finalVolDisplay');
   if (finalVolEl) finalVolEl.textContent = finalVol.toLocaleString() + ' cm³';
+}
+
+function updateCycleCalculations() {
+  const cycleSlider = document.getElementById('cycleDurationSlider');
+  if (!cycleSlider) return;
+  const sec = parseFloat(cycleSlider.value);
+  const valEl = document.getElementById('cycleDurationVal');
+  if (valEl) valEl.textContent = sec.toFixed(1) + ' s';
+
+  const cycles = (150 / sec).toFixed(1);
+  const dispEl = document.getElementById('estimatedCyclesDisplay');
+  if (dispEl) dispEl.textContent = `~${cycles} ciclos / partido`;
+}
+
+function updateShootingDistribution(supPct) {
+  const sup = Math.max(0, Math.min(100, parseInt(supPct)));
+  const fs = 100 - sup;
+  const slider = document.getElementById('shootingDistributionSlider');
+  if (slider && parseInt(slider.value) !== sup) slider.value = sup;
+
+  const barSup = document.getElementById('shotBarSup');
+  if (barSup) barSup.style.width = sup + '%';
+  const barFS = document.getElementById('shotBarFS');
+  if (barFS) barFS.style.width = fs + '%';
+
+  const summary = document.getElementById('shootingStrategySummary');
+  if (summary) summary.textContent = `${sup}% Supresión / ${fs}% Escudo`;
+
+  // Update preset buttons
+  document.querySelectorAll('#shootingPresetsGroup .toggle-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.sup) === sup);
+  });
+}
+
+function updateClimbMinuteDisplay(remainingSec) {
+  const rem = parseInt(remainingSec);
+  const matchSec = 150 - rem;
+  const min = Math.floor(matchSec / 60);
+  const sec = matchSec % 60;
+  const str = `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')} (quedan ${rem}s)`;
+  const el = document.getElementById('climbStartTimeVal');
+  if (el) el.textContent = str;
+}
+
+function updateActiveBotUI() {
+  const labelEl = document.getElementById('activeBotLabel');
+  const valEl = document.getElementById('activeBotVal');
+  const slider = document.getElementById('activeBotSlider');
+
+  const botNames = {
+    ally1: '🤖 Aliado 1 (Bot)',
+    ally2: '🤖 Aliado 2 (Bot)',
+    rival1: '⚔️ Rival 1 (Bot)',
+    rival2: '⚔️ Rival 2 (Bot)',
+    rival3: '⚔️ Rival 3 (Bot)'
+  };
+
+  if (labelEl) labelEl.textContent = botNames[currentSelectedBot] || currentSelectedBot;
+  const val = BOT_DIFFICULTIES[currentSelectedBot] !== undefined ? BOT_DIFFICULTIES[currentSelectedBot] : 0.8;
+  if (slider) slider.value = val;
+
+  let lvlName = 'Media';
+  if (val === 0.0) lvlName = 'Nula';
+  else if (val <= 0.45) lvlName = 'Fácil';
+  else if (val >= 0.95) lvlName = 'Fuerte';
+
+  if (valEl) valEl.textContent = `${lvlName} (${val.toFixed(2)})`;
+
+  document.querySelectorAll('#activeBotPresetGroup .toggle-btn').forEach(btn => {
+    btn.classList.toggle('active', Math.abs(parseFloat(btn.dataset.val) - val) < 0.05);
+  });
 }
 
 function readConfigFromUI() {
   calculateRobotVolumes();
   
+  const initL = parseFloat(document.getElementById('initDimL')?.value) || 45;
+  const initW = parseFloat(document.getElementById('initDimW')?.value) || 45;
+  const initH = parseFloat(document.getElementById('initDimH')?.value) || 40;
+  const hasExp = document.querySelector('#hasExpansionToggle .toggle-btn.active')?.dataset.value === 'yes';
+  const axis = document.querySelector('#expansionAxisToggle .toggle-btn.active')?.dataset.axis || 'length';
+  const amount = parseFloat(document.getElementById('expansionAmount')?.value || 20);
+
+  let finalL = initL;
+  let finalW = initW;
+  let finalH = initH;
+  if (hasExp) {
+    if (axis === 'length') finalL = initL + amount;
+    else if (axis === 'width') finalW = initW + amount;
+    else if (axis === 'height') finalH = initH + amount;
+  }
+
+  const supPct = parseInt(document.getElementById('shootingDistributionSlider')?.value || 100);
+  const climberType = document.querySelector('#climberTypeToggle .toggle-btn.active')?.dataset.value || 'solo';
+  const carrierCap = parseInt(document.querySelector('#carrierCapacityToggle .toggle-btn.active')?.dataset.value || 1);
+
   CONFIG.specs.moveSpeed = parseFloat(document.getElementById('moveSpeed')?.value || 2.8);
   CONFIG.specs.pickupSpeed = parseFloat(document.getElementById('pickupSpeed')?.value || 2.5);
   CONFIG.specs.shotSpeed = parseFloat(document.getElementById('shotSpeed')?.value || 3.2);
-  CONFIG.specs.capacity = parseInt(document.getElementById('capacity')?.value || 14);
+  CONFIG.specs.capacity = hasExp ? parseInt(document.getElementById('capacity')?.value || 14) : parseInt(document.getElementById('capNonExp')?.value || 6);
   CONFIG.specs.accuracy = parseInt(document.getElementById('accuracy')?.value || 92);
   CONFIG.specs.climbSpeed = parseFloat(document.getElementById('climbSpeed')?.value || 0.8);
   CONFIG.specs.climbAnchorTime = parseFloat(document.getElementById('climbAnchorTime')?.value || 2.5);
-  
-  // Selected expansion directions
-  const dirs = [];
-  document.querySelectorAll('#expansionDirGroup .toggle-btn.active').forEach(b => {
-    if (b.dataset.dir) dirs.push(b.dataset.dir);
-  });
 
-  // Save current robot config
   const fullConfig = {
-    initial_length_cm: parseFloat(document.getElementById('initDimL')?.value) || 45,
-    initial_width_cm: parseFloat(document.getElementById('initDimW')?.value) || 45,
-    initial_height_cm: parseFloat(document.getElementById('initDimH')?.value) || 40,
-    final_length_cm: parseFloat(document.getElementById('finalDimL')?.value) || 65,
-    final_width_cm: parseFloat(document.getElementById('finalDimW')?.value) || 50,
-    final_height_cm: parseFloat(document.getElementById('finalDimH')?.value) || 70,
-    expansion_directions: dirs.length > 0 ? dirs : ['left', 'right', 'up'],
-    expansion_duration_sec: parseFloat(document.getElementById('expansionTime')?.value || 2.5),
+    has_expansion: hasExp,
+    expansion_axis: hasExp ? axis : null,
+    expansion_amount_cm: hasExp ? amount : 0,
+    initial_length_cm: initL,
+    initial_width_cm: initW,
+    initial_height_cm: initH,
+    final_length_cm: finalL,
+    final_width_cm: finalW,
+    final_height_cm: finalH,
+    expansion_directions: hasExp ? [axis] : [],
+    expansion_duration_sec: hasExp ? parseFloat(document.getElementById('expansionTime')?.value || 2.5) : 0,
     non_expanded_capacity: parseInt(document.getElementById('capNonExp')?.value || 6),
-    expanded_capacity: parseInt(document.getElementById('capacity')?.value || 14),
+    expanded_capacity: hasExp ? parseInt(document.getElementById('capacity')?.value || 14) : parseInt(document.getElementById('capNonExp')?.value || 6),
     storage_fill_time_sec: parseFloat(document.getElementById('storageFillTime')?.value || 12.5),
+    estimated_cycle_time_sec: parseFloat(document.getElementById('cycleDurationSlider')?.value || 18.0),
     drive_speed_mps: CONFIG.specs.moveSpeed,
     intake_speed_bps: CONFIG.specs.pickupSpeed,
     shooting_speed_bps: CONFIG.specs.shotSpeed,
     robot_accuracy_pct: CONFIG.specs.accuracy,
-    climber_type: document.querySelector('#climberTypeToggle .toggle-btn.active')?.dataset.value || 'solo',
+    shots_suppression_pct: supPct,
+    shots_fire_shield_pct: 100 - supPct,
+    climber_type: climberType,
+    carrier_capacity: climberType === 'buddy_carrier' ? carrierCap : 0,
+    carrier_speed_reduction_1_pct: parseFloat(document.getElementById('carrierRed1Slider')?.value || 30),
+    carrier_speed_reduction_2_pct: parseFloat(document.getElementById('carrierRed2Slider')?.value || 55),
+    piggyback_latch_time_sec: parseFloat(document.getElementById('piggybackLatchTime')?.value || 3.0),
     climb_speed_mps: CONFIG.specs.climbSpeed,
     climb_latch_time_sec: CONFIG.specs.climbAnchorTime,
     target_brace_zone: document.querySelector('#targetBraceZoneToggle .toggle-btn.active')?.dataset.value || 'zone3',
     climb_start_time_remaining_sec: parseInt(document.getElementById('climbStartTime')?.value || 25),
-    game_mode_strategy: document.querySelector('#strategyTargetToggle .toggle-btn.active')?.dataset.value || 'shooter',
+    game_mode_strategy: supPct >= 50 ? 'shooter' : 'feeder_human_player',
+    bot_difficulties: Object.assign({}, BOT_DIFFICULTIES),
     preferred_alliance: CONFIG.alliance,
-    bot_difficulty: 'regional',
-    human_player_accuracy_pct: parseInt(document.getElementById('hpAccuracy')?.value || 90)
+    human_player_accuracy_pct: parseInt(document.getElementById('hpAccuracy')?.value || 70)
   };
 
   localStorage.setItem('fgc_current_robot_config', JSON.stringify(fullConfig));
@@ -3597,32 +3717,208 @@ function readConfigFromUI() {
     RobotConfigService.saveConfig(fullConfig);
   }
 
-  CONFIG.hpAccuracy = parseInt(document.getElementById('hpAccuracy')?.value || 90);
-  CONFIG.allyMultiplier = parseFloat(document.getElementById('allyDiffSlider')?.value || 0.8);
-  CONFIG.rivalMultiplier = parseFloat(document.getElementById('rivalDiffSlider')?.value || 0.8);
+  CONFIG.hpAccuracy = parseInt(document.getElementById('hpAccuracy')?.value || 70);
 }
 
 function initSetupUI() {
   // Dimension inputs calculation listeners
-  ['initDimL', 'initDimW', 'initDimH', 'finalDimL', 'finalDimW', 'finalDimH'].forEach(id => {
+  ['initDimL', 'initDimW', 'initDimH'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', calculateRobotVolumes);
   });
 
-  // Expansion direction multi-select
-  const expDirGroup = document.getElementById('expansionDirGroup');
-  if (expDirGroup) {
-    expDirGroup.querySelectorAll('.toggle-btn').forEach(btn => {
+  // Has Expansion Toggle
+  const hasExpToggle = document.getElementById('hasExpansionToggle');
+  if (hasExpToggle) {
+    hasExpToggle.querySelectorAll('.toggle-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        btn.classList.toggle('active');
+        hasExpToggle.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const isYes = btn.dataset.value === 'yes';
+        const panel = document.getElementById('expansionConfigPanel');
+        if (panel) panel.style.display = isYes ? 'flex' : 'none';
+        const expCapRow = document.getElementById('expandedCapacityRow');
+        if (expCapRow) expCapRow.style.display = isYes ? 'flex' : 'none';
+        calculateRobotVolumes();
         readConfigFromUI();
       });
     });
   }
 
-  // Toggle groups
+  // Expansion Axis Toggle
+  const expAxisToggle = document.getElementById('expansionAxisToggle');
+  if (expAxisToggle) {
+    expAxisToggle.querySelectorAll('.toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        expAxisToggle.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        calculateRobotVolumes();
+        readConfigFromUI();
+      });
+    });
+  }
+
+  // Expansion Amount Slider
+  const expAmountSlider = document.getElementById('expansionAmount');
+  const expAmountVal = document.getElementById('expansionAmountVal');
+  if (expAmountSlider) {
+    expAmountSlider.addEventListener('input', () => {
+      if (expAmountVal) expAmountVal.textContent = `+${expAmountSlider.value} cm`;
+      calculateRobotVolumes();
+      readConfigFromUI();
+    });
+  }
+
+  // Cycle Duration Slider
+  const cycleSlider = document.getElementById('cycleDurationSlider');
+  if (cycleSlider) {
+    cycleSlider.addEventListener('input', () => {
+      updateCycleCalculations();
+      readConfigFromUI();
+    });
+  }
+
+  // Shooting Distribution Slider & Presets
+  const shootDistSlider = document.getElementById('shootingDistributionSlider');
+  if (shootDistSlider) {
+    shootDistSlider.addEventListener('input', () => {
+      updateShootingDistribution(shootDistSlider.value);
+      readConfigFromUI();
+    });
+  }
+
+  document.querySelectorAll('#shootingPresetsGroup .toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const sup = parseInt(btn.dataset.sup);
+      updateShootingDistribution(sup);
+      readConfigFromUI();
+    });
+  });
+
+  // Climber Type Mode Selector
+  const climberToggle = document.getElementById('climberTypeToggle');
+  if (climberToggle) {
+    climberToggle.querySelectorAll('.toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        climberToggle.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const mode = btn.dataset.value;
+
+        const soloEl = document.getElementById('climberSoloFields');
+        const carrierEl = document.getElementById('climberCarrierFields');
+        const piggyEl = document.getElementById('climberPiggybackFields');
+
+        if (soloEl) soloEl.style.display = (mode === 'solo' || mode === 'buddy_carrier') ? 'block' : 'none';
+        if (carrierEl) carrierEl.style.display = mode === 'buddy_carrier' ? 'flex' : 'none';
+        if (piggyEl) piggyEl.style.display = mode === 'buddy_piggyback' ? 'block' : 'none';
+
+        readConfigFromUI();
+      });
+    });
+  }
+
+  // Carrier Capacity Toggle
+  const carrierCapToggle = document.getElementById('carrierCapacityToggle');
+  if (carrierCapToggle) {
+    carrierCapToggle.querySelectorAll('.toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        carrierCapToggle.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const cap = parseInt(btn.dataset.value);
+        const red2Row = document.getElementById('carrierRed2Row');
+        if (red2Row) red2Row.style.display = cap === 2 ? 'flex' : 'none';
+        readConfigFromUI();
+      });
+    });
+  }
+
+  // Carrier Reductions Sliders
+  const carRed1 = document.getElementById('carrierRed1Slider');
+  if (carRed1) {
+    carRed1.addEventListener('input', () => {
+      document.getElementById('carrierRed1Val').textContent = `-${carRed1.value}%`;
+      readConfigFromUI();
+    });
+  }
+  const carRed2 = document.getElementById('carrierRed2Slider');
+  if (carRed2) {
+    carRed2.addEventListener('input', () => {
+      document.getElementById('carrierRed2Val').textContent = `-${carRed2.value}%`;
+      readConfigFromUI();
+    });
+  }
+
+  // Piggyback latch time slider
+  const pigLatch = document.getElementById('piggybackLatchTime');
+  if (pigLatch) {
+    pigLatch.addEventListener('input', () => {
+      document.getElementById('piggybackLatchTimeVal').textContent = `${parseFloat(pigLatch.value).toFixed(1)} s`;
+      readConfigFromUI();
+    });
+  }
+
+  // Climb Start Time Minute Slider
+  const climbStartTime = document.getElementById('climbStartTime');
+  if (climbStartTime) {
+    climbStartTime.addEventListener('input', () => {
+      updateClimbMinuteDisplay(climbStartTime.value);
+      readConfigFromUI();
+    });
+  }
+
+  // Bot Target Tab Group
+  const botTabs = document.getElementById('botTargetTabGroup');
+  if (botTabs) {
+    botTabs.querySelectorAll('.toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        botTabs.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentSelectedBot = btn.dataset.bot;
+        updateActiveBotUI();
+      });
+    });
+  }
+
+  // Active Bot Difficulty Slider
+  const activeBotSlider = document.getElementById('activeBotSlider');
+  if (activeBotSlider) {
+    activeBotSlider.addEventListener('input', () => {
+      const v = parseFloat(activeBotSlider.value);
+      BOT_DIFFICULTIES[currentSelectedBot] = v;
+      updateActiveBotUI();
+      initRobots();
+      readConfigFromUI();
+    });
+  }
+
+  // Active Bot Presets Group
+  document.querySelectorAll('#activeBotPresetGroup .toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const v = parseFloat(btn.dataset.val);
+      BOT_DIFFICULTIES[currentSelectedBot] = v;
+      updateActiveBotUI();
+      initRobots();
+      readConfigFromUI();
+    });
+  });
+
+  // Apply Diff To All Bots Button
+  const btnApplyAll = document.getElementById('btnApplyDiffToAll');
+  if (btnApplyAll) {
+    btnApplyAll.addEventListener('click', () => {
+      const v = BOT_DIFFICULTIES[currentSelectedBot];
+      Object.keys(BOT_DIFFICULTIES).forEach(k => {
+        BOT_DIFFICULTIES[k] = v;
+      });
+      initRobots();
+      readConfigFromUI();
+      alert(`✓ Nivel de dificultad (${v.toFixed(2)}) aplicado a los 5 bots de la partida.`);
+    });
+  }
+
+  // General Toggle groups (Alliance, Team, GameMode, Coop)
   document.querySelectorAll('.toggle-group').forEach(group => {
-    if (group.id === 'expansionDirGroup') return; // Handled separately for multi-select
+    if (['hasExpansionToggle', 'expansionAxisToggle', 'shootingPresetsGroup', 'climberTypeToggle', 'carrierCapacityToggle', 'botTargetTabGroup', 'activeBotPresetGroup'].includes(group.id)) return;
     group.querySelectorAll('.toggle-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         group.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
@@ -3647,49 +3943,12 @@ function initSetupUI() {
         } else if (groupId === 'coopRelationToggle') {
           CONFIG.coopRelation = val;
           initRobots();
-        } else if (groupId === 'allyDifficulty') {
-          const v = parseFloat(val);
-          CONFIG.allyMultiplier = v;
-          if (document.getElementById('allyDiffSlider')) document.getElementById('allyDiffSlider').value = v;
-          if (document.getElementById('allyDiffVal')) document.getElementById('allyDiffVal').textContent = v.toFixed(2);
-          initRobots();
-        } else if (groupId === 'rivalDifficulty') {
-          const v = parseFloat(val);
-          CONFIG.rivalMultiplier = v;
-          if (document.getElementById('rivalDiffSlider')) document.getElementById('rivalDiffSlider').value = v;
-          if (document.getElementById('rivalDiffVal')) document.getElementById('rivalDiffVal').textContent = v.toFixed(2);
-          initRobots();
         }
         readConfigFromUI();
         renderSetupPreview();
       });
     });
   });
-
-  // Bot difficulty sliders
-  const allyDiffSlider = document.getElementById('allyDiffSlider');
-  const allyDiffVal = document.getElementById('allyDiffVal');
-  if (allyDiffSlider && allyDiffVal) {
-    allyDiffSlider.addEventListener('input', () => {
-      const v = parseFloat(allyDiffSlider.value);
-      allyDiffVal.textContent = v.toFixed(2);
-      CONFIG.allyMultiplier = v;
-      initRobots();
-      renderSetupPreview();
-    });
-  }
-
-  const rivalDiffSlider = document.getElementById('rivalDiffSlider');
-  const rivalDiffVal = document.getElementById('rivalDiffVal');
-  if (rivalDiffSlider && rivalDiffVal) {
-    rivalDiffSlider.addEventListener('input', () => {
-      const v = parseFloat(rivalDiffSlider.value);
-      rivalDiffVal.textContent = v.toFixed(2);
-      CONFIG.rivalMultiplier = v;
-      initRobots();
-      renderSetupPreview();
-    });
-  }
 
   // Sliders mapping
   const sliderMappings = [
@@ -3703,7 +3962,6 @@ function initSetupUI() {
     { id: 'accuracy', display: 'accuracyVal', suffix: '%', decimals: 0 },
     { id: 'climbSpeed', display: 'climbSpeedVal', suffix: ' m/s', decimals: 1 },
     { id: 'climbAnchorTime', display: 'climbAnchorTimeVal', suffix: ' s', decimals: 1 },
-    { id: 'climbStartTime', display: 'climbStartTimeVal', suffix: ' s restantes', decimals: 0 },
     { id: 'hpAccuracy', display: 'hpAccuracyVal', suffix: '%', decimals: 0 }
   ];
 
@@ -3780,6 +4038,10 @@ function initSetupUI() {
   // Initialize Gamepad subsystem
   initGamepadManager();
   calculateRobotVolumes();
+  updateCycleCalculations();
+  updateShootingDistribution(100);
+  updateClimbMinuteDisplay(25);
+  updateActiveBotUI();
 }
 
 // ── 15. INITIALIZATION ───────────────────────────────────────────

@@ -505,13 +505,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('modalInitVol').textContent = `${initVol} cm³`;
     document.getElementById('modalFinalDims').textContent = `${rc.final_length_cm} × ${rc.final_width_cm} × ${rc.final_height_cm} cm`;
     document.getElementById('modalFinalVol').textContent = `${finalVol} cm³`;
-    document.getElementById('modalExpDirections').textContent = (rc.expansion_directions || ['left', 'right', 'up']).map(d => d.toUpperCase()).join(', ');
-    document.getElementById('modalExpDuration').textContent = `${rc.expansion_duration_sec || 2.5} s`;
-    document.getElementById('modalHasExpHopper').textContent = rc.has_expandable_hopper ? 'SÍ (Linear Motion Telescópico)' : 'NO (Tolva Fija)';
+    document.getElementById('modalExpDirections').textContent = rc.has_expansion ? `Eje ${(rc.expansion_axis || 'Largo').toUpperCase()} (+${rc.expansion_amount_cm || 20} cm)` : 'Sin Expansión (Fijo)';
+    document.getElementById('modalExpDuration').textContent = rc.has_expansion ? `${rc.expansion_duration_sec || 2.5} s` : '0 s';
+    document.getElementById('modalHasExpHopper').textContent = rc.has_expansion ? `SÍ (Expansión activa +${rc.expansion_amount_cm || 20}cm)` : 'NO (Chasis Fijo)';
 
     // Storage
     document.getElementById('modalCapBase').textContent = `${rc.non_expanded_capacity || 6} pelotas`;
-    document.getElementById('modalCapExpanded').textContent = `${rc.expanded_capacity || 14} pelotas`;
+    document.getElementById('modalCapExpanded').textContent = rc.has_expansion ? `${rc.expanded_capacity || 14} pelotas` : `${rc.non_expanded_capacity || 6} pelotas`;
     document.getElementById('modalFillTime').textContent = `${rc.storage_fill_time_sec || 12.5} s`;
 
     // Kinematics
@@ -519,8 +519,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('modalIntakeSpeed').textContent = `${rc.intake_speed_bps || 2.5} pelotas/s`;
     document.getElementById('modalShootingSpeed').textContent = `${rc.shooting_speed_bps || 3.2} pelotas/s`;
     document.getElementById('modalAccuracy').textContent = `${rc.robot_accuracy_pct || 92}%`;
-    document.getElementById('modalShootingStrategy').textContent = rc.game_mode_strategy === 'feeder_human_player' ? '🔥 Feeder a Fire Shield' : '🎯 Shooter a Supresión';
-    document.getElementById('modalController').textContent = rc.controller_mapping || 'Teclado WASD';
+    document.getElementById('modalShootingStrategy').textContent = `${rc.shots_suppression_pct !== undefined ? rc.shots_suppression_pct : 100}% Supresión / ${rc.shots_fire_shield_pct !== undefined ? rc.shots_fire_shield_pct : 0}% Escudo`;
+    document.getElementById('modalController').textContent = rc.controller_mapping || 'Teclado WASD / Mando';
 
     // Climber
     const climbName = rc.climber_type === 'buddy_carrier' ? '🤝 Buddy Carrier (Nodriza con enganche)' : 

@@ -814,7 +814,14 @@
 
       // Check if redirected from a protected route or auth trigger
       const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('auth') === 'required' || urlParams.get('auth') === 'open') {
+      if (urlParams.get('auth') === 'verified') {
+        alert('🎉 ¡Tu correo electrónico ha sido verificado con éxito!\nInicia sesión para ingresar a la plataforma.');
+        tabLogin.classList.add('active');
+        tabRegister.classList.remove('active');
+        loginForm.style.display = 'block';
+        registerForm.style.display = 'none';
+        authModal.classList.add('active');
+      } else if (urlParams.get('auth') === 'required' || urlParams.get('auth') === 'open') {
         tabLogin.classList.add('active');
         tabRegister.classList.remove('active');
         loginForm.style.display = 'block';
@@ -912,25 +919,30 @@
         try {
           submitBtn.disabled = true;
           submitBtn.textContent = 'Setting up profile...';
-          await AuthService.signUp(email, pass, {
+          const result = await AuthService.signUp(email, pass, {
             username,
             role,
             teamName,
             countryCode: country,
             avatarUrl
           });
-          authModal.classList.remove('active');
 
-          const redir = sessionStorage.getItem('fgc_redirect_after_auth');
-          if (redir) {
-            sessionStorage.removeItem('fgc_redirect_after_auth');
-            window.location.href = redir;
+          if (result?.emailConfirmationRequired) {
+            authModal.classList.remove('active');
+            alert(`✉️ ¡Cuenta creada para @${username}!\n\nHemos enviado un correo de confirmación a: ${email}\n\nPor favor revisa tu bandeja de entrada y haz clic en el enlace para activar tu cuenta antes de iniciar sesión.`);
+          } else {
+            authModal.classList.remove('active');
+            const redir = sessionStorage.getItem('fgc_redirect_after_auth');
+            if (redir) {
+              sessionStorage.removeItem('fgc_redirect_after_auth');
+              window.location.href = redir;
+            }
           }
         } catch (err) {
           alert('⚠️ ' + err.message);
         } finally {
           submitBtn.disabled = false;
-          submitBtn.textContent = 'Complete Profile & Enter';
+          submitBtn.textContent = 'Create Profile & Team';
         }
       });
 

@@ -139,6 +139,19 @@ CREATE TABLE IF NOT EXISTS public.robot_configs (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Asegurar nuevas columnas de ingeniería en robot_configs si la tabla ya existía
+ALTER TABLE public.robot_configs ADD COLUMN IF NOT EXISTS has_expansion BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.robot_configs ADD COLUMN IF NOT EXISTS expansion_axis TEXT DEFAULT 'length';
+ALTER TABLE public.robot_configs ADD COLUMN IF NOT EXISTS expansion_amount_cm NUMERIC(5,2) DEFAULT 0;
+ALTER TABLE public.robot_configs ADD COLUMN IF NOT EXISTS estimated_cycle_time_sec NUMERIC(5,2) DEFAULT 18.00;
+ALTER TABLE public.robot_configs ADD COLUMN IF NOT EXISTS shots_suppression_pct NUMERIC(5,2) DEFAULT 100.00;
+ALTER TABLE public.robot_configs ADD COLUMN IF NOT EXISTS shots_fire_shield_pct NUMERIC(5,2) DEFAULT 0.00;
+ALTER TABLE public.robot_configs ADD COLUMN IF NOT EXISTS carrier_capacity INT DEFAULT 0;
+ALTER TABLE public.robot_configs ADD COLUMN IF NOT EXISTS carrier_speed_reduction_1_pct NUMERIC(5,2) DEFAULT 30.00;
+ALTER TABLE public.robot_configs ADD COLUMN IF NOT EXISTS carrier_speed_reduction_2_pct NUMERIC(5,2) DEFAULT 55.00;
+ALTER TABLE public.robot_configs ADD COLUMN IF NOT EXISTS piggyback_latch_time_sec NUMERIC(5,2) DEFAULT 3.00;
+ALTER TABLE public.robot_configs ADD COLUMN IF NOT EXISTS bot_difficulties JSONB DEFAULT '{"ally1":0.8,"ally2":0.8,"rival1":0.8,"rival2":0.8,"rival3":0.8}'::jsonb;
+
 -- 4. TABLA: USER_STRATEGIES (Playbook Táctico)
 CREATE TABLE IF NOT EXISTS public.user_strategies (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

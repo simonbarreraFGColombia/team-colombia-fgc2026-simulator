@@ -371,17 +371,32 @@ const AuthService = {
     const cleanRole = role === 'mentor' ? 'mentor' : 'student';
 
     let userObj = null;
+    let emailConfirmationRequired = false;
 
     if (supabaseClient) {
       try {
+        const redirectUrl = window.location.origin + '/?auth=verified';
         const { data, error } = await supabaseClient.auth.signUp({
           email: email.trim(),
-          password: password
+          password: password,
+          options: {
+            emailRedirectTo: redirectUrl,
+            data: {
+              username: cleanUser,
+              team_name: cleanTeam,
+              country_code: cleanCountry,
+              role: cleanRole,
+              avatar_url: avatarUrl || 'pilot'
+            }
+          }
         });
         if (error && !error.message.includes('already')) {
           throw error;
         }
         userObj = data?.user || null;
+        if (!data?.session) {
+          emailConfirmationRequired = true;
+        }
       } catch (e) {
         console.warn("Supabase signUp warning:", e);
         if (e.message?.toLowerCase().includes('already')) {
@@ -416,11 +431,14 @@ const AuthService = {
       }
     }
 
-    this.currentProfile = profileData;
-    localStorage.setItem('fgc_active_profile', JSON.stringify(profileData));
-    this.currentUser = userObj || { id: profileId, email: email.trim() };
-    this.notifyListeners();
-    return { user: this.currentUser, profile: profileData };
+    if (!emailConfirmationRequired) {
+      this.currentProfile = profileData;
+      localStorage.setItem('fgc_active_profile', JSON.stringify(profileData));
+      this.currentUser = userObj || { id: profileId, email: email.trim() };
+      this.notifyListeners();
+    }
+
+    return { user: userObj, profile: profileData, emailConfirmationRequired };
   },
 
   checkProfileBanStatus(profile) {

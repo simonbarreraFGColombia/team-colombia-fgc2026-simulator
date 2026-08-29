@@ -506,10 +506,17 @@ const I18nManager = {
     const saved = localStorage.getItem('fgc_lang') || 'en';
     this.currentLang = saved;
 
-    // Load local storage translation cache
+    // Load local storage translation cache for current language
     try {
-      const stored = localStorage.getItem('fgc_trans_cache');
-      if (stored) this.cache = JSON.parse(stored);
+      const stored = localStorage.getItem(`fgc_trans_cache_${this.currentLang}`) || localStorage.getItem('fgc_trans_cache');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed[this.currentLang]) {
+          this.cache[this.currentLang] = parsed[this.currentLang];
+        } else if (typeof parsed === 'object') {
+          this.cache[this.currentLang] = parsed;
+        }
+      }
     } catch (e) {
       this.cache = {};
     }
@@ -806,9 +813,8 @@ const I18nManager = {
     // Show loading indicator
     this._showTranslatingIndicator(phraseList.length);
 
-    // Translate each phrase individually for 100% reliability
-    // Process in parallel batches of 5 for speed
-    const PARALLEL = 5;
+    // Translate each phrase individually with increased parallelism for fast response
+    const PARALLEL = 12;
     let completed = 0;
 
     const translateOne = async (phrase) => {
@@ -850,6 +856,7 @@ const I18nManager = {
 
     this.cache[targetLang] = dict;
     try {
+      localStorage.setItem(`fgc_trans_cache_${targetLang}`, JSON.stringify(dict));
       localStorage.setItem('fgc_trans_cache', JSON.stringify(this.cache));
     } catch (e) {}
 
