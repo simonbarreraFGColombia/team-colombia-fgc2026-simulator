@@ -160,13 +160,21 @@
       this.renderMessages();
 
       try {
-        const response = await fetch('/api/chat', {
+        let response = await fetch('/api/chat.js', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             messages: this.messages
           })
         });
+
+        if (!response.ok && response.status === 404) {
+          response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: this.messages })
+          });
+        }
 
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
