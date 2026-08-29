@@ -160,13 +160,19 @@ const I18nManager = {
     const search = document.getElementById('langSearchInput');
     const list = document.getElementById('langList');
 
+    if (dropdown) {
+      dropdown.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+    }
+
     if (btn && dropdown) {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.isOpen = !this.isOpen;
         dropdown.classList.toggle('active', this.isOpen);
         if (this.isOpen && search) {
-          search.focus();
+          setTimeout(() => search.focus(), 50);
         }
       });
 

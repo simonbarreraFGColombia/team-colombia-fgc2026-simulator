@@ -44,10 +44,10 @@
   --glow-blue: 0 0 18px rgba(51, 119, 255, 0.4);
   --glow-green: 0 0 18px rgba(45, 210, 100, 0.4);
 
-  /* Fonts */
-  --font-display: 'Montserrat', sans-serif;
-  --font-score: 'Orbitron', sans-serif;
-  --font-body: 'Poppins', sans-serif;
+  /* Fonts: Friendly, highly legible and modern */
+  --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-score: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 
   /* Motion */
   --ease: cubic-bezier(0.25, 0.8, 0.25, 1);
