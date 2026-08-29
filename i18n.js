@@ -724,7 +724,6 @@ const I18nManager = {
 
     this.originalNodes.forEach((origVal) => {
       const trimmed = origVal.trim();
-      // Only translate meaningful text phrases (avoid pure numbers/symbols)
       if (trimmed && trimmed.length > 1 && !/^\d+$/.test(trimmed) && !dict[trimmed]) {
         missingPhrases.add(trimmed);
       }
@@ -738,30 +737,40 @@ const I18nManager = {
     const phraseList = Array.from(missingPhrases);
     if (phraseList.length === 0) return;
 
-    // Batch translate in chunks of 25
-    const chunkSize = 25;
-    for (let i = 0; i < phraseList.length; i += chunkSize) {
-      const chunk = phraseList.slice(i, i + chunkSize);
-      try {
-        const query = chunk.join(' \n ');
-        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(query)}`;
-        const res = await fetch(url);
-        if (!res.ok) continue;
+    // Show loading indicator
+    this._showTranslatingIndicator(phraseList.length);
 
+    // Translate each phrase individually for 100% reliability
+    // Process in parallel batches of 5 for speed
+    const PARALLEL = 5;
+    let completed = 0;
+
+    const translateOne = async (phrase) => {
+      try {
+        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLang}&dt=t&q=${encodeURIComponent(phrase)}`;
+        const res = await fetch(url);
+        if (!res.ok) return;
         const data = await res.json();
         if (data && data[0]) {
-          const fullTranslated = data[0].map(x => x[0]).join('');
-          const translatedParts = fullTranslated.split(' \n ');
-
-          chunk.forEach((origText, idx) => {
-            const transText = translatedParts[idx] ? translatedParts[idx].trim() : null;
-            if (transText) {
-              dict[origText] = transText;
-            }
-          });
+          const translated = data[0].map(x => x[0]).join('').trim();
+          if (translated && translated !== phrase) {
+            dict[phrase] = translated;
+          }
         }
       } catch (err) {
-        console.warn(`Translation fetch error for ${targetLang}:`, err);
+        console.warn(`Translation error for "${phrase}" -> ${targetLang}:`, err);
+      }
+      completed++;
+      this._updateTranslatingIndicator(completed, phraseList.length);
+    };
+
+    for (let i = 0; i < phraseList.length; i += PARALLEL) {
+      const batch = phraseList.slice(i, i + PARALLEL);
+      await Promise.all(batch.map(p => translateOne(p)));
+
+      // Progressively apply translations to DOM every batch
+      if (this.currentLang === targetLang) {
+        this.translateDOMWithDict(dict);
       }
     }
 
@@ -770,10 +779,49 @@ const I18nManager = {
       localStorage.setItem('fgc_trans_cache', JSON.stringify(this.cache));
     } catch (e) {}
 
-    // Re-apply translation immediately to the DOM
+    this._hideTranslatingIndicator();
+
+    // Final re-apply
     if (this.currentLang === targetLang) {
       this.translateDOMWithDict(dict);
     }
+  },
+
+  _showTranslatingIndicator(total) {
+    let el = document.getElementById('i18nTranslatingBar');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'i18nTranslatingBar';
+      el.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999999;background:linear-gradient(90deg,#ff6b00,#ff9500);height:3px;transition:width 0.3s ease;width:0%;';
+      document.body.appendChild(el);
+    }
+    el.style.display = 'block';
+    el.style.width = '2%';
+
+    let label = document.getElementById('i18nTranslatingLabel');
+    if (!label) {
+      label = document.createElement('div');
+      label.id = 'i18nTranslatingLabel';
+      label.style.cssText = 'position:fixed;top:5px;left:50%;transform:translateX(-50%);z-index:999999;background:rgba(17,21,37,0.92);color:#ff9500;padding:5px 18px;border-radius:20px;font-size:0.75rem;font-family:var(--font-display,Inter,sans-serif);backdrop-filter:blur(6px);border:1px solid rgba(255,107,0,0.3);';
+      document.body.appendChild(label);
+    }
+    label.textContent = `Translating… 0/${total}`;
+    label.style.display = 'block';
+  },
+
+  _updateTranslatingIndicator(done, total) {
+    const bar = document.getElementById('i18nTranslatingBar');
+    const label = document.getElementById('i18nTranslatingLabel');
+    const pct = Math.min(98, Math.round((done / total) * 100));
+    if (bar) bar.style.width = pct + '%';
+    if (label) label.textContent = `Translating… ${done}/${total}`;
+  },
+
+  _hideTranslatingIndicator() {
+    const bar = document.getElementById('i18nTranslatingBar');
+    const label = document.getElementById('i18nTranslatingLabel');
+    if (bar) { bar.style.width = '100%'; setTimeout(() => { bar.style.display = 'none'; }, 400); }
+    if (label) { setTimeout(() => { label.style.display = 'none'; }, 400); }
   }
 };
 
