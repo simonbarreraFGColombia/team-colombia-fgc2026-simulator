@@ -3977,21 +3977,300 @@ function initSetupUI() {
     }
   });
 
-  // Start button
-  document.getElementById('startMatchBtn').addEventListener('click', () => {
+  // ══ Named Preset Management & Cloud Sync ══
+  const savePresetModal = document.getElementById('savePresetModal');
+  const savePresetBtn = document.getElementById('savePresetBtn');
+  const closeSavePresetModalBtn = document.getElementById('closeSavePresetModalBtn');
+  const cancelSavePresetBtn = document.getElementById('cancelSavePresetBtn');
+  const confirmSavePresetBtn = document.getElementById('confirmSavePresetBtn');
+  const presetNameInput = document.getElementById('presetNameInput');
+  const cloudPresetSelect = document.getElementById('cloudPresetSelect');
+
+  function getStoredPresets() {
+    try {
+      return JSON.parse(localStorage.getItem('fgc_saved_presets') || '[]');
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveStoredPresets(presets) {
+    localStorage.setItem('fgc_saved_presets', JSON.stringify(presets));
+  }
+
+  function populatePresetDropdown() {
+    if (!cloudPresetSelect) return;
+    const presets = getStoredPresets();
+    cloudPresetSelect.innerHTML = '<option value="">📋 Cargar Preset en Nube / Local...</option>';
+    
+    // Default system presets
+    const defaults = [
+      { id: 'default_cycler', name: '⚡ Táctica Ciclador Rápido (Expansión +X)', isDefault: true },
+      { id: 'default_carrier', name: '🤝 Táctica Nodriza / Carrier (Buddy Z3)', isDefault: true },
+      { id: 'default_defensive', name: '🛡️ Táctica Fire Shield + Supresión 50/50', isDefault: true },
+    ];
+
+    defaults.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = `★ ${d.name}`;
+      cloudPresetSelect.appendChild(opt);
+    });
+
+    if (presets.length > 0) {
+      const sep = document.createElement('option');
+      sep.disabled = true;
+      sep.textContent = '──────── Mis Presets Guardados ────────';
+      cloudPresetSelect.appendChild(sep);
+
+      presets.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = `custom_${p.id}`;
+        opt.textContent = `💾 ${p.name} (${new Date(p.date).toLocaleDateString()})`;
+        cloudPresetSelect.appendChild(opt);
+      });
+    }
+  }
+
+  function applyPresetData(cfg) {
+    if (!cfg) return;
+
+    // Has expansion
+    const isExp = cfg.has_expansion === true || cfg.has_expansion === 'yes';
+    const hasExpToggle = document.getElementById('hasExpansionToggle');
+    if (hasExpToggle) {
+      hasExpToggle.querySelectorAll('.toggle-btn').forEach(b => {
+        b.classList.toggle('active', (b.dataset.value === 'yes') === isExp);
+      });
+      const panel = document.getElementById('expansionConfigPanel');
+      if (panel) panel.style.display = isExp ? 'flex' : 'none';
+      const expCapRow = document.getElementById('expandedCapacityRow');
+      if (expCapRow) expCapRow.style.display = isExp ? 'flex' : 'none';
+    }
+
+    // Expansion Axis
+    const axis = cfg.expansion_axis || (Array.isArray(cfg.expansion_directions) ? cfg.expansion_directions[0] : 'length');
+    const expAxisToggle = document.getElementById('expansionAxisToggle');
+    if (expAxisToggle) {
+      expAxisToggle.querySelectorAll('.toggle-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.axis === axis);
+      });
+    }
+
+    // Expansion Amount
+    const amount = cfg.expansion_amount_cm !== undefined ? cfg.expansion_amount_cm : 20;
+    if (document.getElementById('expansionAmount')) document.getElementById('expansionAmount').value = amount;
+    if (document.getElementById('expansionAmountVal')) document.getElementById('expansionAmountVal').textContent = `+${amount} cm`;
+
+    // Dimensions
+    if (document.getElementById('initDimL')) document.getElementById('initDimL').value = cfg.initial_length_cm || 45;
+    if (document.getElementById('initDimW')) document.getElementById('initDimW').value = cfg.initial_width_cm || 45;
+    if (document.getElementById('initDimH')) document.getElementById('initDimH').value = cfg.initial_height_cm || 40;
+
+    // Storage
+    if (document.getElementById('capNonExp')) document.getElementById('capNonExp').value = cfg.non_expanded_capacity || 6;
+    if (document.getElementById('capacity')) document.getElementById('capacity').value = cfg.expanded_capacity || 14;
+    if (document.getElementById('storageFillTime')) document.getElementById('storageFillTime').value = cfg.storage_fill_time_sec || 12.5;
+
+    // Cycle Duration
+    if (document.getElementById('cycleDurationSlider')) document.getElementById('cycleDurationSlider').value = cfg.estimated_cycle_time_sec || 18.0;
+
+    // Kinematics
+    if (document.getElementById('moveSpeed')) document.getElementById('moveSpeed').value = cfg.drive_speed_mps || 2.8;
+    if (document.getElementById('pickupSpeed')) document.getElementById('pickupSpeed').value = cfg.intake_speed_bps || 2.5;
+    if (document.getElementById('shotSpeed')) document.getElementById('shotSpeed').value = cfg.shooting_speed_bps || 3.2;
+    if (document.getElementById('accuracy')) document.getElementById('accuracy').value = cfg.robot_accuracy_pct || 92;
+
+    // Shooting distribution
+    const sup = cfg.shots_suppression_pct !== undefined ? cfg.shots_suppression_pct : 100;
+    updateShootingDistribution(sup);
+
+    // Climber
+    const climberType = cfg.climber_type || 'solo';
+    const climberToggle = document.getElementById('climberTypeToggle');
+    if (climberToggle) {
+      climberToggle.querySelectorAll('.toggle-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.value === climberType);
+      });
+      const soloEl = document.getElementById('climberSoloFields');
+      const carrierEl = document.getElementById('climberCarrierFields');
+      const piggyEl = document.getElementById('climberPiggybackFields');
+      if (soloEl) soloEl.style.display = (climberType === 'solo' || climberType === 'buddy_carrier') ? 'block' : 'none';
+      if (carrierEl) carrierEl.style.display = climberType === 'buddy_carrier' ? 'flex' : 'none';
+      if (piggyEl) piggyEl.style.display = climberType === 'buddy_piggyback' ? 'block' : 'none';
+    }
+
+    if (document.getElementById('climbSpeed')) document.getElementById('climbSpeed').value = cfg.climb_speed_mps || 0.8;
+    if (document.getElementById('climbAnchorTime')) document.getElementById('climbAnchorTime').value = cfg.climb_latch_time_sec || 2.5;
+
+    const braceZone = cfg.target_brace_zone || 'zone3';
+    const braceToggle = document.getElementById('targetBraceZoneToggle');
+    if (braceToggle) {
+      braceToggle.querySelectorAll('.toggle-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.value === braceZone);
+      });
+    }
+
+    if (document.getElementById('climbStartTime')) document.getElementById('climbStartTime').value = cfg.climb_start_time_remaining_sec || 25;
+    if (document.getElementById('carrierRed1Slider')) document.getElementById('carrierRed1Slider').value = cfg.carrier_speed_reduction_1_pct || 30;
+    if (document.getElementById('carrierRed2Slider')) document.getElementById('carrierRed2Slider').value = cfg.carrier_speed_reduction_2_pct || 55;
+    if (document.getElementById('piggybackLatchTime')) document.getElementById('piggybackLatchTime').value = cfg.piggyback_latch_time_sec || 3.0;
+
+    // Bot difficulties
+    if (cfg.bot_difficulties) {
+      BOT_DIFFICULTIES = Object.assign({ ally1: 0.8, ally2: 0.8, rival1: 0.8, rival2: 0.8, rival3: 0.8 }, cfg.bot_difficulties);
+    }
+    if (document.getElementById('hpAccuracy')) document.getElementById('hpAccuracy').value = cfg.human_player_accuracy_pct || 70;
+
+    calculateRobotVolumes();
+    updateCycleCalculations();
+    updateClimbMinuteDisplay(cfg.climb_start_time_remaining_sec || 25);
+    updateActiveBotUI();
     readConfigFromUI();
+    initRobots();
+    renderSetupPreview();
+  }
+
+  // Open Save Preset Modal
+  if (savePresetBtn) {
+    savePresetBtn.addEventListener('click', () => {
+      readConfigFromUI();
+      if (presetNameInput) presetNameInput.value = `Estrategia Robot ${new Date().toLocaleDateString()}`;
+      if (savePresetModal) savePresetModal.style.display = 'flex';
+      if (presetNameInput) setTimeout(() => presetNameInput.focus(), 50);
+    });
+  }
+
+  if (closeSavePresetModalBtn) {
+    closeSavePresetModalBtn.addEventListener('click', () => {
+      if (savePresetModal) savePresetModal.style.display = 'none';
+    });
+  }
+
+  if (cancelSavePresetBtn) {
+    cancelSavePresetBtn.addEventListener('click', () => {
+      if (savePresetModal) savePresetModal.style.display = 'none';
+    });
+  }
+
+  // Confirm Save Named Preset
+  if (confirmSavePresetBtn) {
+    confirmSavePresetBtn.addEventListener('click', async () => {
+      readConfigFromUI();
+      const name = (presetNameInput?.value || '').trim() || `Preset ${new Date().toLocaleString()}`;
+      const presets = getStoredPresets();
+      const currentConfig = JSON.parse(localStorage.getItem('fgc_current_robot_config') || '{}');
+      
+      const newPreset = {
+        id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
+        name: name,
+        date: new Date().toISOString(),
+        config: currentConfig
+      };
+
+      presets.unshift(newPreset);
+      saveStoredPresets(presets);
+      populatePresetDropdown();
+
+      // Save also to Supabase active robot_configs
+      if (typeof RobotConfigService !== 'undefined' && RobotConfigService.saveConfig) {
+        await RobotConfigService.saveConfig(currentConfig);
+      }
+
+      if (savePresetModal) savePresetModal.style.display = 'none';
+      alert(`✓ Preset "${name}" guardado exitosamente en la nube y en tu perfil.`);
+    });
+  }
+
+  // Handle Preset Dropdown Selection
+  if (cloudPresetSelect) {
+    cloudPresetSelect.addEventListener('change', () => {
+      const val = cloudPresetSelect.value;
+      if (!val) return;
+
+      if (val === 'default_cycler') {
+        applyPresetData({
+          has_expansion: true,
+          expansion_axis: 'length',
+          expansion_amount_cm: 25,
+          initial_length_cm: 45,
+          initial_width_cm: 45,
+          initial_height_cm: 40,
+          expanded_capacity: 16,
+          non_expanded_capacity: 6,
+          drive_speed_mps: 3.4,
+          intake_speed_bps: 3.5,
+          shooting_speed_bps: 4.0,
+          robot_accuracy_pct: 95,
+          shots_suppression_pct: 100,
+          climber_type: 'solo',
+          climb_speed_mps: 1.0,
+          target_brace_zone: 'zone3',
+          climb_start_time_remaining_sec: 25,
+          estimated_cycle_time_sec: 14.0
+        });
+      } else if (val === 'default_carrier') {
+        applyPresetData({
+          has_expansion: false,
+          initial_length_cm: 50,
+          initial_width_cm: 50,
+          initial_height_cm: 45,
+          non_expanded_capacity: 8,
+          drive_speed_mps: 2.6,
+          intake_speed_bps: 2.0,
+          shooting_speed_bps: 2.5,
+          robot_accuracy_pct: 90,
+          shots_suppression_pct: 75,
+          climber_type: 'buddy_carrier',
+          carrier_capacity: 2,
+          carrier_speed_reduction_1_pct: 25,
+          carrier_speed_reduction_2_pct: 50,
+          climb_speed_mps: 0.7,
+          target_brace_zone: 'zone3',
+          climb_start_time_remaining_sec: 40,
+          estimated_cycle_time_sec: 20.0
+        });
+      } else if (val === 'default_defensive') {
+        applyPresetData({
+          has_expansion: true,
+          expansion_axis: 'width',
+          expansion_amount_cm: 20,
+          initial_length_cm: 45,
+          initial_width_cm: 45,
+          initial_height_cm: 45,
+          expanded_capacity: 12,
+          non_expanded_capacity: 6,
+          drive_speed_mps: 2.8,
+          intake_speed_bps: 2.5,
+          shooting_speed_bps: 3.0,
+          robot_accuracy_pct: 92,
+          shots_suppression_pct: 50,
+          climber_type: 'solo',
+          target_brace_zone: 'zone2',
+          climb_start_time_remaining_sec: 30,
+          estimated_cycle_time_sec: 18.0
+        });
+      } else if (val.startsWith('custom_')) {
+        const id = val.replace('custom_', '');
+        const presets = getStoredPresets();
+        const found = presets.find(p => p.id === id);
+        if (found && found.config) {
+          applyPresetData(found.config);
+        }
+      }
+    });
+  }
+
+  // Start button - Immediate Supabase Sync
+  document.getElementById('startMatchBtn').addEventListener('click', async () => {
+    readConfigFromUI();
+    const currentConfig = JSON.parse(localStorage.getItem('fgc_current_robot_config') || '{}');
+    if (typeof RobotConfigService !== 'undefined' && RobotConfigService.saveConfig) {
+      await RobotConfigService.saveConfig(currentConfig);
+    }
     ESPIONAGE_TRACKER.reset();
     startMatch();
   });
-
-  // Save specs button
-  const savePresetBtn = document.getElementById('savePresetBtn');
-  if (savePresetBtn) {
-    savePresetBtn.addEventListener('click', async () => {
-      readConfigFromUI();
-      alert("✓ ¡Especificaciones de ingeniería del robot guardadas exitosamente!");
-    });
-  }
 
   // Play again button
   document.getElementById('playAgainBtn').addEventListener('click', () => {
@@ -4035,8 +4314,9 @@ function initSetupUI() {
     window.location.href = 'index.html';
   });
 
-  // Initialize Gamepad subsystem
+  // Initialize Gamepad subsystem & Presets
   initGamepadManager();
+  populatePresetDropdown();
   calculateRobotVolumes();
   updateCycleCalculations();
   updateShootingDistribution(100);
@@ -4057,9 +4337,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         if (document.getElementById('initDimL')) document.getElementById('initDimL').value = cfg.initial_length_cm || 45;
         if (document.getElementById('initDimW')) document.getElementById('initDimW').value = cfg.initial_width_cm || 45;
         if (document.getElementById('initDimH')) document.getElementById('initDimH').value = cfg.initial_height_cm || 40;
-        if (document.getElementById('finalDimL')) document.getElementById('finalDimL').value = cfg.final_length_cm || 65;
-        if (document.getElementById('finalDimW')) document.getElementById('finalDimW').value = cfg.final_width_cm || 50;
-        if (document.getElementById('finalDimH')) document.getElementById('finalDimH').value = cfg.final_height_cm || 70;
         if (document.getElementById('moveSpeed')) document.getElementById('moveSpeed').value = cfg.drive_speed_mps || 2.8;
         if (document.getElementById('capacity')) document.getElementById('capacity').value = cfg.expanded_capacity || 14;
         calculateRobotVolumes();

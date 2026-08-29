@@ -361,12 +361,12 @@
                 <input type="range" class="spec-slider" id="climbAnchorTime" min="0.5" max="8.0" step="0.5" value="2.5">
               </div>
             </div>
-            <div class="config-row" style="margin-top: 8px;">
-              <label style="font-size: 0.72rem;" data-i18n="Target Brace Zone">Zona Objetivo</label>
-              <div class="toggle-group" id="targetBraceZoneToggle">
-                <button type="button" class="toggle-btn" data-value="zone1">Zona 1 (Baja)</button>
-                <button type="button" class="toggle-btn" data-value="zone2">Zona 2 (Media)</button>
-                <button type="button" class="toggle-btn active" data-value="zone3">Zona 3 (Alta)</button>
+            <div class="config-row" style="margin-top: 10px;">
+              <label style="font-size: 0.74rem; font-weight: 700; color: #ffd700;" data-i18n="Target Brace Zone">🎯 Zona Objetivo en el Brace</label>
+              <div class="toggle-group" id="targetBraceZoneToggle" style="width: 100%;">
+                <button type="button" class="toggle-btn" data-value="zone1" style="flex: 1;" data-i18n="Zone 1 (Low) - 10 pts">Zona 1 (Baja) • 10 pts</button>
+                <button type="button" class="toggle-btn" data-value="zone2" style="flex: 1;" data-i18n="Zone 2 (Mid) - 20 pts">Zona 2 (Media) • 20 pts</button>
+                <button type="button" class="toggle-btn active" data-value="zone3" style="flex: 1;" data-i18n="Zone 3 (High) - 30 pts">Zona 3 (Alta) • 30 pts</button>
               </div>
             </div>
             <div class="spec-row" style="margin-top: 8px;">
@@ -380,12 +380,12 @@
 
           <!-- Subpanel: CARRIER / MOTHERSHIP MODE -->
           <div id="climberCarrierFields" style="display: none; flex-direction: column; gap: 10px;">
-            <div style="background: rgba(56, 189, 248, 0.06); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 10px;">
+            <div style="background: rgba(56, 189, 248, 0.06); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px; padding: 12px;">
               <div class="config-row" style="margin-bottom: 8px;">
-                <label style="font-size: 0.72rem;" data-i18n="Carrier Capacity">Robots a Transportar</label>
+                <label style="font-size: 0.72rem; font-weight: 700; color: #38bdf8;" data-i18n="Carrier Capacity">Robots Aliados a Transportar</label>
                 <div class="toggle-group" id="carrierCapacityToggle">
-                  <button type="button" class="toggle-btn active" data-value="1">1 Robot Aliado 🤖</button>
-                  <button type="button" class="toggle-btn" data-value="2">2 Robots Aliados 🤖🤖</button>
+                  <button type="button" class="toggle-btn active" data-value="1">1 Robot Aliado 🤖 (+20 pts)</button>
+                  <button type="button" class="toggle-btn" data-value="2">2 Robots Aliados 🤖🤖 (+40 pts)</button>
                 </div>
               </div>
               <div class="spec-row">
@@ -409,12 +409,14 @@
           <div id="climberPiggybackFields" style="display: none; background: rgba(245, 158, 11, 0.06); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 8px; padding: 12px;">
             <div class="spec-row">
               <div class="spec-info">
-                <label data-i18n="Hook / Latch Time to Carrier">Tiempo de Enganche al Aliado</label>
+                <label data-i18n="Hook / Latch Time to Carrier">Tiempo de Enganche al Aliado Nodriza</label>
                 <span class="spec-unit" id="piggybackLatchTimeVal">3.0 s</span>
               </div>
               <input type="range" class="spec-slider" id="piggybackLatchTime" min="1.0" max="10.0" step="0.5" value="3.0">
             </div>
-            <small style="font-size: 0.68rem; color: #94a3b8; display: block; margin-top: 6px;" data-i18n="No heavy climb motors needed. Robot latches to the carrier and rides up.">No requiere motor de escalada pesada: el robot se engancha al aliado nodriza y es izado.</small>
+            <div style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 6px; padding: 6px 10px; margin-top: 6px;">
+              <small style="font-size: 0.68rem; color: #ffd700; display: block;" data-i18n="Piggyback advantage: saves climber motor weight and secures same zone points as carrier.">✨ Ventaja A Cuestas: Ahorra peso de motores de escalada y obtiene los mismos puntos de zona que el robot nodriza.</small>
+            </div>
           </div>
         </div>
 
@@ -799,6 +801,51 @@
           </button>
           <button type="button" class="gp-footer-btn primary" id="saveGamepadBtn">
             ✓ Guardar y Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         MODAL: SAVE NAMED PRESET TO CLOUD
+         ═══════════════════════════════════════════════════════════ -->
+    <div id="savePresetModal" class="gamepad-modal-overlay" style="display: none;">
+      <div class="gamepad-modal" style="max-width: 520px;">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <span class="modal-icon">💾</span>
+            <div>
+              <h3 style="margin: 0; font-size: 1.05rem; color: #ffd700;" data-i18n="Save Engineering Preset">GUARDAR PRESET DE INGENIERÍA</h3>
+              <p class="modal-subtitle" style="margin-top: 2px;" data-i18n="Store custom specs, expansion, cycle metrics and tactics in Supabase">Almacena dimensiones, ciclo, cinemática y tácticas en la nube.</p>
+            </div>
+          </div>
+          <button type="button" class="modal-close-btn" id="closeSavePresetModalBtn">✕</button>
+        </div>
+
+        <div class="modal-body" style="padding: 16px;">
+          <div style="margin-bottom: 14px;">
+            <label style="font-size: 0.76rem; font-weight: 700; color: #e2e8f0; display: block; margin-bottom: 6px;" data-i18n="Preset Name">Nombre del Preset / Configuración</label>
+            <input type="text" id="presetNameInput" placeholder="Ej. Robot Ofensivo Incheon v1" maxlength="50" style="width: 100%; padding: 10px 14px; background: rgba(0,0,0,0.35); border: 1px solid rgba(255,215,0,0.3); border-radius: 8px; color: #fff; font-size: 0.85rem; outline: none; box-shadow: inset 0 2px 6px rgba(0,0,0,0.4);">
+          </div>
+
+          <div style="background: rgba(255,215,0,0.05); border: 1px solid rgba(255,215,0,0.2); border-radius: 8px; padding: 10px; font-size: 0.7rem; color: #cbd5e1; line-height: 1.5;">
+            <span style="color: #ffd700; font-weight: 700;">📦 Contenido que se guardará:</span>
+            <ul style="margin: 4px 0 0 16px; padding: 0;">
+              <li>Dimensiones y regla de expansión en 1 eje</li>
+              <li>Capacidad de tolva y tiempo estimado de 1 ciclo</li>
+              <li>Cinemática y porcentaje de Supresión / Escudo de Fuego</li>
+              <li>Modo de escalada (Solitario / Transportista / A Cuestas)</li>
+              <li>Dificultad individual de los 5 bots y precisión de Human Player</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="padding: 12px 16px; display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="gp-footer-btn secondary" id="cancelSavePresetBtn" data-i18n="Cancel">
+            Cancelar
+          </button>
+          <button type="button" class="btn-save-specs-glowing" id="confirmSavePresetBtn" style="padding: 10px 20px; font-size: 0.85rem;" data-i18n="Save Preset to Cloud">
+            ✓ Guardar Preset en Nube
           </button>
         </div>
       </div>

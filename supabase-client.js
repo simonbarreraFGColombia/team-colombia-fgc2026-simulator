@@ -737,6 +737,10 @@ const RobotConfigService = {
       role: role,
       avatar_url: avatar,
       
+      has_expansion: Boolean(configPayload.has_expansion),
+      expansion_axis: configPayload.expansion_axis || 'length',
+      expansion_amount_cm: parseFloat(configPayload.expansion_amount_cm) || 0,
+      
       initial_length_cm: parseFloat(configPayload.initial_length_cm) || 45,
       initial_width_cm: parseFloat(configPayload.initial_width_cm) || 45,
       initial_height_cm: parseFloat(configPayload.initial_height_cm) || 40,
@@ -747,30 +751,39 @@ const RobotConfigService = {
       final_height_cm: parseFloat(configPayload.final_height_cm) || 70,
       final_volume_cm3: finalVol,
 
-      expansion_directions: Array.isArray(configPayload.expansion_directions) ? configPayload.expansion_directions : ['left', 'right', 'up'],
+      expansion_directions: Array.isArray(configPayload.expansion_directions) ? configPayload.expansion_directions : [configPayload.expansion_axis || 'length'],
       expansion_duration_sec: parseFloat(configPayload.expansion_duration_sec) || 2.5,
-      has_expandable_hopper: Boolean(configPayload.has_expandable_hopper),
+      has_expandable_hopper: Boolean(configPayload.has_expansion),
 
       non_expanded_capacity: parseInt(configPayload.non_expanded_capacity) || 6,
       expanded_capacity: parseInt(configPayload.expanded_capacity) || 14,
       storage_fill_time_sec: parseFloat(configPayload.storage_fill_time_sec) || 12.5,
+      estimated_cycle_time_sec: parseFloat(configPayload.estimated_cycle_time_sec) || 18.0,
 
       drive_speed_mps: parseFloat(configPayload.drive_speed_mps) || 2.8,
       intake_speed_bps: parseFloat(configPayload.intake_speed_bps) || 2.5,
       shooting_speed_bps: parseFloat(configPayload.shooting_speed_bps) || 3.2,
       robot_accuracy_pct: parseFloat(configPayload.robot_accuracy_pct) || 92.0,
 
+      shots_suppression_pct: parseFloat(configPayload.shots_suppression_pct) !== undefined ? parseFloat(configPayload.shots_suppression_pct) : 100,
+      shots_fire_shield_pct: parseFloat(configPayload.shots_fire_shield_pct) !== undefined ? parseFloat(configPayload.shots_fire_shield_pct) : 0,
+
       climber_type: configPayload.climber_type || 'solo',
+      carrier_capacity: parseInt(configPayload.carrier_capacity) || 0,
+      carrier_speed_reduction_1_pct: parseFloat(configPayload.carrier_speed_reduction_1_pct) || 30,
+      carrier_speed_reduction_2_pct: parseFloat(configPayload.carrier_speed_reduction_2_pct) || 55,
+      piggyback_latch_time_sec: parseFloat(configPayload.piggyback_latch_time_sec) || 3.0,
       climb_speed_mps: parseFloat(configPayload.climb_speed_mps) || 0.8,
       climb_latch_time_sec: parseFloat(configPayload.climb_latch_time_sec) || 2.5,
       target_brace_zone: configPayload.target_brace_zone || 'zone3',
       climb_start_time_remaining_sec: parseInt(configPayload.climb_start_time_remaining_sec) || 25,
 
+      bot_difficulties: configPayload.bot_difficulties || { ally1: 0.8, ally2: 0.8, rival1: 0.8, rival2: 0.8, rival3: 0.8 },
       game_mode_strategy: configPayload.game_mode_strategy || 'shooter',
       preferred_alliance: configPayload.preferred_alliance || 'red',
       preferred_role: configPayload.preferred_role || 'R1',
       bot_difficulty: configPayload.bot_difficulty || 'regional',
-      human_player_accuracy_pct: parseFloat(configPayload.human_player_accuracy_pct) || 90.0,
+      human_player_accuracy_pct: parseFloat(configPayload.human_player_accuracy_pct) || 70.0,
       controller_mapping: configPayload.controller_mapping || 'keyboard',
       updated_at: new Date().toISOString()
     };
@@ -779,12 +792,17 @@ const RobotConfigService = {
     localStorage.setItem('fgc_robot_config_' + (uid || 'guest'), JSON.stringify(fullRecord));
     localStorage.setItem('fgc_current_robot_config', JSON.stringify(fullRecord));
 
-    if (supabaseClient && uid) {
+    if (supabaseClient) {
       try {
-        const { error } = await supabaseClient
-          .from('robot_configs')
-          .upsert(fullRecord, { onConflict: 'user_id' });
-        if (error) console.warn("RobotConfig save notice:", error.message);
+        if (uid && uid !== 'guest') {
+          const { error } = await supabaseClient
+            .from('robot_configs')
+            .upsert(fullRecord, { onConflict: 'user_id' });
+          if (error) console.warn("RobotConfig save notice:", error.message);
+        } else {
+          // Anonymous or guest team config insert
+          await supabaseClient.from('robot_configs').insert([fullRecord]);
+        }
       } catch (e) {
         console.warn("RobotConfig save error:", e);
       }

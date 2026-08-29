@@ -52,205 +52,257 @@
       </div>
     </header>
 
-    <!-- Strategy Designer Header -->
-    <section class="card" style="margin-bottom: 20px;">
+    <!-- ═══════════════════════════════════════════════════════════
+         COACH TACTICS BOARD (PIZARRA TÁCTICA DE ENTRENADOR)
+         ═══════════════════════════════════════════════════════════ -->
+    
+    <!-- Hero Header -->
+    <section class="card" style="margin-bottom: 16px; background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(0,51,160,0.08)); border: 1px solid rgba(255,215,0,0.3);">
       <div class="card-header">
-        <h3>🧠 TALLER TÁCTICO DE ALIANZA</h3>
-        <span class="badge">ESTRATEGIA FGC 2026</span>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 1.5rem;">📋</span>
+          <div>
+            <h2 style="margin: 0; font-size: 1.15rem; color: #ffd700; font-family: var(--font-display);">PIZARRA TÁCTICA DE ENTRENADOR • FGC 2026</h2>
+            <p style="font-size: 0.76rem; color: #94a3b8; margin: 2px 0 0 0;">
+              Diseña la sinergia de tu alianza (3 robots + Human Player) de forma visual, simula proyecciones de puntos en tiempo real y traslada la táctica al simulador 2D.
+            </p>
+          </div>
+        </div>
+        <span class="badge" style="background: rgba(255,215,0,0.2); color: #ffd700; font-weight: 700;">OFICIAL IGNITING INNOVATION</span>
       </div>
-      <p style="font-size: 0.85rem; color: var(--color-text-muted); margin-top: 6px;">
-        Diseña el plan de juego para los 3 robots de tu alianza, ajusta la sinergia de roles y calcula proyecciones matemáticas de puntos según el reglamento oficial de <strong>Igniting Innovation</strong>. Guarda tus tácticas en la nube y pruébalas directamente en el simulador.
-      </p>
+
+      <!-- Quick Tactics Presets Bar -->
+      <div style="margin-top: 14px; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px;">
+        <span style="font-size: 0.72rem; font-weight: 700; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 8px;">
+          ⚡ Tácticas Maestras Predefinidas (Selección Rápida 1-Click):
+        </span>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button type="button" class="preset-tactic-btn active" data-tactic="attack" style="flex: 1; min-width: 140px; padding: 8px 12px; background: rgba(255,215,0,0.1); border: 1px solid #ffd700; border-radius: 8px; color: #ffd700; font-weight: 700; font-size: 0.74rem; cursor: pointer; text-align: left; transition: all 0.2s;">
+            ⚔️ Full Ataque &amp; Ciclado<br><small style="font-weight: 400; color: #cbd5e1; font-size: 0.65rem;">3 Cicladores + Z3 Doble</small>
+          </button>
+          <button type="button" class="preset-tactic-btn" data-tactic="carrier" style="flex: 1; min-width: 140px; padding: 8px 12px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); border-radius: 8px; color: #38bdf8; font-weight: 700; font-size: 0.74rem; cursor: pointer; text-align: left; transition: all 0.2s;">
+            🤝 Nodriza / Buddy Climb<br><small style="font-weight: 400; color: #cbd5e1; font-size: 0.65rem;">Carrier transporta 2 aliados (+40 pts)</small>
+          </button>
+          <button type="button" class="preset-tactic-btn" data-tactic="shield" style="flex: 1; min-width: 140px; padding: 8px 12px; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 8px; color: #f59e0b; font-weight: 700; font-size: 0.74rem; cursor: pointer; text-align: left; transition: all 0.2s;">
+            🛡️ Escudo de Fuego &amp; Defensa<br><small style="font-weight: 400; color: #cbd5e1; font-size: 0.65rem;">Fire Shield 100% + Bloqueo</small>
+          </button>
+          <button type="button" class="preset-tactic-btn" data-tactic="balanced" style="flex: 1; min-width: 140px; padding: 8px 12px; background: rgba(45,210,100,0.1); border: 1px solid rgba(45,210,100,0.3); border-radius: 8px; color: #2dd264; font-weight: 700; font-size: 0.74rem; cursor: pointer; text-align: left; transition: all 0.2s;">
+            ⚖️ Alianza Equilibrada<br><small style="font-weight: 400; color: #cbd5e1; font-size: 0.65rem;">1 Ciclador, 1 Hopper, 1 Extinguidor</small>
+          </button>
+        </div>
+      </div>
     </section>
 
     <!-- Main Strategy Grid -->
-    <div style="display: grid; grid-template-columns: 1fr 340px; gap: 20px;" class="playbook-layout">
+    <div style="display: grid; grid-template-columns: 1fr 340px; gap: 16px;" class="playbook-layout">
       
-      <!-- Left: Tactical Builder Form -->
-      <div style="display: flex; flex-direction: column; gap: 20px;">
+      <!-- Left Column: 3 Robot Synergy Cards & Field Strategy -->
+      <div style="display: flex; flex-direction: column; gap: 16px;">
         
-        <!-- Strategy Identity Card -->
+        <!-- Step 1: Strategy Name & HP Synergy -->
         <div class="card">
           <div class="card-header">
-            <h3>1. IDENTIDAD DE LA ESTRATEGIA</h3>
+            <h3 style="font-size: 0.85rem; color: #ffd700;">1. IDENTIDAD Y HUMAN PLAYER</h3>
             <span class="badge">CONFIGURACIÓN</span>
           </div>
-          <div style="display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap;">
-            <div style="flex: 2; min-width: 200px;">
-              <label style="font-size: 0.75rem; font-weight: 600; color: #94a3b8; display: block; margin-bottom: 5px;">Nombre de la Estrategia</label>
-              <input type="text" id="stratName" placeholder="Ej. Ciclado Rápido + Buddy Climb Doble" style="width: 100%; padding: 10px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; color: #fff; font-family: inherit; font-size: 0.85rem;" maxlength="50" value="Ciclado Ofensivo y Escalada Z3">
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-top: 10px;">
+            <div>
+              <label style="font-size: 0.72rem; font-weight: 600; color: #94a3b8; display: block; margin-bottom: 4px;">Nombre del Plan Táctico</label>
+              <input type="text" id="stratName" placeholder="Ej. Táctica Incheon Match 14" style="width: 100%; padding: 8px 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; color: #fff; font-size: 0.82rem;" maxlength="50" value="Ataque Ofensivo + Escalada Z3">
             </div>
-            <div style="flex: 1; min-width: 140px;">
-              <label style="font-size: 0.75rem; font-weight: 600; color: #94a3b8; display: block; margin-bottom: 5px;">Táctica Human Player</label>
-              <select id="hpStrategy" style="width: 100%; padding: 10px 14px; background: #131728; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; color: #fff; font-family: inherit; font-size: 0.85rem;">
+            <div>
+              <label style="font-size: 0.72rem; font-weight: 600; color: #94a3b8; display: block; margin-bottom: 4px;">Táctica Human Player</label>
+              <select id="hpStrategy" style="width: 100%; padding: 8px 10px; background: #131728; border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; color: #fff; font-size: 0.82rem;">
                 <option value="balanced">Balanceado (Cancha + Extinguidor)</option>
                 <option value="extinguisher_focus">Enfoque Extinguidor (Fire Shield)</option>
-                <option value="field_resupply">Abastecimiento Cancha (Rápido)</option>
+                <option value="field_resupply">Abastecimiento Rápido de Cancha</option>
               </select>
             </div>
           </div>
         </div>
 
-        <!-- Alliance Robots Roles Card -->
+        <!-- Step 2: 3 Interactive Robot Cards -->
         <div class="card">
           <div class="card-header">
-            <h3>2. ROLES DE LOS 3 ROBOTS DE LA ALIANZA</h3>
-            <span class="badge">SINERGIA</span>
+            <h3 style="font-size: 0.85rem; color: #ffd700;">2. DISTRIBUCIÓN DE ROLES DE LA ALIANZA (3 ROBOTS)</h3>
+            <span class="badge">SINERGIA EN CANCHA</span>
           </div>
 
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-top: 14px;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-top: 12px;">
             
-            <!-- Robot 1 (Tu Robot) -->
-            <div style="background: rgba(255,215,0,0.04); border: 1px solid rgba(255,215,0,0.25); border-radius: 12px; padding: 14px;">
-              <div style="font-size: 0.8rem; font-weight: 700; color: #ffd700; margin-bottom: 10px; display: flex; justify-content: space-between;">
-                <span>★ ROBOT 1 (LÍDER / TÚ)</span>
-                <span>🇨🇴</span>
+            <!-- Robot 1: Tu Robot (Líder) -->
+            <div style="background: rgba(255,215,0,0.04); border: 1px solid rgba(255,215,0,0.3); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,215,0,0.2); padding-bottom: 6px;">
+                <span style="font-size: 0.8rem; font-weight: 800; color: #ffd700;">★ ROBOT 1 (TÚ)</span>
+                <span style="font-size: 0.7rem; background: rgba(255,215,0,0.2); color: #ffd700; padding: 2px 6px; border-radius: 4px; font-weight: 700;">LÍDER 🇨🇴</span>
               </div>
-              <label style="font-size: 0.72rem; color: #94a3b8; display: block; margin-bottom: 4px;">Rol Principal</label>
-              <select id="r1Role" class="role-select" style="width: 100%; padding: 8px; background: #131728; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff; font-size: 0.8rem; margin-bottom: 10px;">
-                <option value="cycler">Ciclador Principal (Suppression)</option>
-                <option value="feeder">Alimentador / Hopper</option>
-                <option value="extinguisher">Especialista Extinguidor</option>
-                <option value="climber">Especialista Escalada</option>
-              </select>
-
-              <label style="font-size: 0.72rem; color: #94a3b8; display: block; margin-bottom: 4px;">Meta de Escalada (Endgame)</label>
-              <select id="r1Climb" class="climb-select" style="width: 100%; padding: 8px; background: #131728; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff; font-size: 0.8rem;">
-                <option value="zone3">Zona 3 (Alta - x1.6)</option>
-                <option value="zone2">Zona 2 (Media - x1.4)</option>
-                <option value="zone1">Zona 1 (Baja - x1.2)</option>
-                <option value="buddy">Buddy Climb (+25 pts)</option>
-                <option value="none">Sin Escalada (Piso)</option>
-              </select>
+              <div>
+                <label style="font-size: 0.68rem; color: #94a3b8; display: block; margin-bottom: 3px;">Rol Principal en Partido</label>
+                <select id="r1Role" class="role-select" style="width: 100%; padding: 6px 8px; background: #131728; border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; color: #fff; font-size: 0.78rem;">
+                  <option value="cycler">🎯 Ciclador Principal (Suppression)</option>
+                  <option value="extinguisher">🛡️ Especialista Extinguidor</option>
+                  <option value="feeder">📦 Tolva / Abastecedor</option>
+                  <option value="carrier">🤝 Nodriza (Buddy Carrier)</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 0.68rem; color: #94a3b8; display: block; margin-bottom: 3px;">Meta de Escalada (Brace)</label>
+                <select id="r1Climb" class="climb-select" style="width: 100%; padding: 6px 8px; background: #131728; border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; color: #fff; font-size: 0.78rem;">
+                  <option value="zone3">Zona 3 (Alta - 30 pts / x1.6)</option>
+                  <option value="zone2">Zona 2 (Media - 20 pts / x1.4)</option>
+                  <option value="zone1">Zona 1 (Baja - 10 pts / x1.2)</option>
+                  <option value="buddy">Buddy Climb (+20 pts extra)</option>
+                  <option value="none">Sin Escalada (0 pts)</option>
+                </select>
+              </div>
             </div>
 
-            <!-- Robot 2 (Aliado 1) -->
-            <div style="background: rgba(51,119,255,0.04); border: 1px solid rgba(51,119,255,0.25); border-radius: 12px; padding: 14px;">
-              <div style="font-size: 0.8rem; font-weight: 700; color: #5c9aff; margin-bottom: 10px; display: flex; justify-content: space-between;">
-                <span>🤝 ROBOT 2 (ALIADO 1)</span>
-                <span>🤖</span>
+            <!-- Robot 2: Aliado 1 -->
+            <div style="background: rgba(56,189,248,0.04); border: 1px solid rgba(56,189,248,0.3); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(56,189,248,0.2); padding-bottom: 6px;">
+                <span style="font-size: 0.8rem; font-weight: 800; color: #38bdf8;">🤝 ROBOT 2 (ALIADO 1)</span>
+                <span style="font-size: 0.7rem; background: rgba(56,189,248,0.2); color: #38bdf8; padding: 2px 6px; border-radius: 4px; font-weight: 700;">BOT / HUMANO</span>
               </div>
-              <label style="font-size: 0.72rem; color: #94a3b8; display: block; margin-bottom: 4px;">Rol Principal</label>
-              <select id="r2Role" class="role-select" style="width: 100%; padding: 8px; background: #131728; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff; font-size: 0.8rem; margin-bottom: 10px;">
-                <option value="cycler">Ciclador Secundario</option>
-                <option value="extinguisher" selected>Especialista Extinguidor</option>
-                <option value="feeder">Alimentador / Hopper</option>
-                <option value="defender">Defensa / Control de Zona</option>
-              </select>
-
-              <label style="font-size: 0.72rem; color: #94a3b8; display: block; margin-bottom: 4px;">Meta de Escalada (Endgame)</label>
-              <select id="r2Climb" class="climb-select" style="width: 100%; padding: 8px; background: #131728; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff; font-size: 0.8rem;">
-                <option value="zone3" selected>Zona 3 (Alta - x1.6)</option>
-                <option value="zone2">Zona 2 (Media - x1.4)</option>
-                <option value="zone1">Zona 1 (Baja - x1.2)</option>
-                <option value="buddy">Buddy Climb (+25 pts)</option>
-                <option value="none">Sin Escalada (Piso)</option>
-              </select>
+              <div>
+                <label style="font-size: 0.68rem; color: #94a3b8; display: block; margin-bottom: 3px;">Rol Principal en Partido</label>
+                <select id="r2Role" class="role-select" style="width: 100%; padding: 6px 8px; background: #131728; border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; color: #fff; font-size: 0.78rem;">
+                  <option value="extinguisher" selected>🛡️ Especialista Extinguidor</option>
+                  <option value="cycler">🎯 Ciclador Secundario</option>
+                  <option value="feeder">📦 Tolva / Abastecedor</option>
+                  <option value="defender">🛑 Defensa &amp; Bloqueo</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 0.68rem; color: #94a3b8; display: block; margin-bottom: 3px;">Meta de Escalada (Brace)</label>
+                <select id="r2Climb" class="climb-select" style="width: 100%; padding: 6px 8px; background: #131728; border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; color: #fff; font-size: 0.78rem;">
+                  <option value="zone3" selected>Zona 3 (Alta - 30 pts / x1.6)</option>
+                  <option value="zone2">Zona 2 (Media - 20 pts / x1.4)</option>
+                  <option value="zone1">Zona 1 (Baja - 10 pts / x1.2)</option>
+                  <option value="buddy">Buddy Climb (+20 pts extra)</option>
+                  <option value="none">Sin Escalada (0 pts)</option>
+                </select>
+              </div>
             </div>
 
-            <!-- Robot 3 (Aliado 2) -->
-            <div style="background: rgba(45,210,100,0.04); border: 1px solid rgba(45,210,100,0.25); border-radius: 12px; padding: 14px;">
-              <div style="font-size: 0.8rem; font-weight: 700; color: #2dd264; margin-bottom: 10px; display: flex; justify-content: space-between;">
-                <span>🛡️ ROBOT 3 (ALIADO 2)</span>
-                <span>🤖</span>
+            <!-- Robot 3: Aliado 2 -->
+            <div style="background: rgba(45,210,100,0.04); border: 1px solid rgba(45,210,100,0.3); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(45,210,100,0.2); padding-bottom: 6px;">
+                <span style="font-size: 0.8rem; font-weight: 800; color: #2dd264;">🛡️ ROBOT 3 (ALIADO 2)</span>
+                <span style="font-size: 0.7rem; background: rgba(45,210,100,0.2); color: #2dd264; padding: 2px 6px; border-radius: 4px; font-weight: 700;">BOT / HUMANO</span>
               </div>
-              <label style="font-size: 0.72rem; color: #94a3b8; display: block; margin-bottom: 4px;">Rol Principal</label>
-              <select id="r3Role" class="role-select" style="width: 100%; padding: 8px; background: #131728; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff; font-size: 0.8rem; margin-bottom: 10px;">
-                <option value="feeder" selected>Alimentador / Hopper</option>
-                <option value="cycler">Ciclador de Apoyo</option>
-                <option value="defender">Defensa y Bloqueo</option>
-              </select>
-
-              <label style="font-size: 0.72rem; color: #94a3b8; display: block; margin-bottom: 4px;">Meta de Escalada (Endgame)</label>
-              <select id="r3Climb" class="climb-select" style="width: 100%; padding: 8px; background: #131728; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff; font-size: 0.8rem;">
-                <option value="buddy" selected>Buddy Climb (+25 pts)</option>
-                <option value="zone3">Zona 3 (Alta - x1.6)</option>
-                <option value="zone2">Zona 2 (Media - x1.4)</option>
-                <option value="zone1">Zona 1 (Baja - x1.2)</option>
-                <option value="none">Sin Escalada (Piso)</option>
-              </select>
+              <div>
+                <label style="font-size: 0.68rem; color: #94a3b8; display: block; margin-bottom: 3px;">Rol Principal en Partido</label>
+                <select id="r3Role" class="role-select" style="width: 100%; padding: 6px 8px; background: #131728; border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; color: #fff; font-size: 0.78rem;">
+                  <option value="feeder" selected>📦 Tolva / Abastecedor</option>
+                  <option value="cycler">🎯 Ciclador de Apoyo</option>
+                  <option value="defender">🛑 Defensa de Neutral Zone</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 0.68rem; color: #94a3b8; display: block; margin-bottom: 3px;">Meta de Escalada (Brace)</label>
+                <select id="r3Climb" class="climb-select" style="width: 100%; padding: 6px 8px; background: #131728; border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; color: #fff; font-size: 0.78rem;">
+                  <option value="buddy" selected>Buddy Climb (+20 pts extra)</option>
+                  <option value="zone3">Zona 3 (Alta - 30 pts / x1.6)</option>
+                  <option value="zone2">Zona 2 (Media - 20 pts / x1.4)</option>
+                  <option value="zone1">Zona 1 (Baja - 10 pts / x1.2)</option>
+                  <option value="none">Sin Escalada (0 pts)</option>
+                </select>
+              </div>
             </div>
 
           </div>
         </div>
 
-        <!-- Tactical Notes Card -->
+        <!-- Step 3: Match Timeline Infographic -->
         <div class="card">
           <div class="card-header">
-            <h3>3. NOTAS TÁCTICAS Y OBSERVACIONES</h3>
-            <span class="badge">PLAYBOOK</span>
+            <h3 style="font-size: 0.85rem; color: #ffd700;">3. CRONOGRAMA TÁCTICO DE 150 SEGUNDOS</h3>
+            <span class="badge">TIEMPOS DE PARTIDO</span>
           </div>
-          <textarea id="stratNotes" placeholder="Describe los puntos clave de coordinación para los primeros 60s, la transición del extinguidor y los últimos 30s de anclaje de escalada..." style="width: 100%; height: 80px; margin-top: 10px; padding: 10px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; color: #fff; font-family: inherit; font-size: 0.82rem; resize: none;"></textarea>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 10px;">
+            <div style="background: rgba(0,0,0,0.25); border-left: 3px solid #38bdf8; border-radius: 4px; padding: 8px 10px;">
+              <strong style="color: #38bdf8; font-size: 0.74rem;">0:00 - 0:15 (Autónomo)</strong>
+              <p style="font-size: 0.68rem; color: #94a3b8; margin: 3px 0 0 0;">Salida de subestación, recolección del suelo y primeros 2 disparos.</p>
+            </div>
+            <div style="background: rgba(0,0,0,0.25); border-left: 3px solid #ffd700; border-radius: 4px; padding: 8px 10px;">
+              <strong style="color: #ffd700; font-size: 0.74rem;">0:15 - 2:00 (TeleOp Activo)</strong>
+              <p style="font-size: 0.68rem; color: #94a3b8; margin: 3px 0 0 0;">Ciclado continuo, carga en el extinguidor y abastecimiento del HP.</p>
+            </div>
+            <div style="background: rgba(0,0,0,0.25); border-left: 3px solid #2dd264; border-radius: 4px; padding: 8px 10px;">
+              <strong style="color: #2dd264; font-size: 0.74rem;">2:00 - 2:30 (Endgame)</strong>
+              <p style="font-size: 0.68rem; color: #94a3b8; margin: 3px 0 0 0;">Enganche al Brace, izado de robots y aplicación del multiplicador.</p>
+            </div>
+          </div>
         </div>
 
       </div>
 
-      <!-- Right: Projections & Cloud Actions -->
-      <div style="display: flex; flex-direction: column; gap: 20px;">
+      <!-- Right Column: Live Projections & Actions -->
+      <div style="display: flex; flex-direction: column; gap: 16px;">
         
         <!-- Score Projections Card -->
-        <div class="card" style="border: 1px solid rgba(255,215,0,0.3); background: linear-gradient(180deg, rgba(255,215,0,0.05) 0%, rgba(10,12,20,0.9) 100%);">
+        <div class="card" style="border: 1px solid rgba(255,215,0,0.35); background: linear-gradient(180deg, rgba(255,215,0,0.06) 0%, rgba(10,12,20,0.95) 100%);">
           <div class="card-header">
-            <h3>PROYECCIÓN MATEMÁTICA</h3>
-            <span class="badge" style="background: rgba(255,215,0,0.2); color: #ffd700;">EN VIVO</span>
+            <h3 style="font-size: 0.85rem; color: #ffd700;">PROYECCIÓN EN VIVO</h3>
+            <span class="badge" style="background: rgba(255,215,0,0.2); color: #ffd700;">SIMULACIÓN</span>
           </div>
 
-          <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 12px;">
+          <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 10px;">
             
-            <!-- Best Case -->
-            <div style="background: rgba(45,210,100,0.1); border: 1px solid rgba(45,210,100,0.3); border-radius: 10px; padding: 12px;">
+            <!-- Ideal -->
+            <div style="background: rgba(45,210,100,0.1); border: 1px solid rgba(45,210,100,0.3); border-radius: 8px; padding: 10px;">
               <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 0.75rem; font-weight: 700; color: #2dd264;">MÁXIMO ESCENARIO</span>
-                <span id="bestPoints" style="font-family: 'Orbitron', sans-serif; font-size: 1.25rem; font-weight: 900; color: #2dd264;">380 pts</span>
+                <span style="font-size: 0.72rem; font-weight: 700; color: #2dd264;">MÁXIMO ESCENARIO</span>
+                <span id="bestPoints" style="font-family: 'Orbitron', sans-serif; font-size: 1.2rem; font-weight: 900; color: #2dd264;">380 pts</span>
               </div>
-              <p style="font-size: 0.7rem; color: #94a3b8; margin: 4px 0 0 0;">Ciclado continuo sin bloqueos, escalada completa exitosa.</p>
+              <small style="font-size: 0.66rem; color: #94a3b8; display: block; margin-top: 2px;">Ciclado continuo sin fallos + Escalada triple exitosa.</small>
             </div>
 
-            <!-- Average Case -->
-            <div style="background: rgba(51,119,255,0.1); border: 1px solid rgba(51,119,255,0.3); border-radius: 10px; padding: 12px;">
+            <!-- Average -->
+            <div style="background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); border-radius: 8px; padding: 10px;">
               <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 0.75rem; font-weight: 700; color: #5c9aff;">ESCENARIO MEDIO</span>
-                <span id="avgPoints" style="font-family: 'Orbitron', sans-serif; font-size: 1.15rem; font-weight: 900; color: #5c9aff;">245 pts</span>
+                <span style="font-size: 0.72rem; font-weight: 700; color: #38bdf8;">ESCENARIO REALISTA</span>
+                <span id="avgPoints" style="font-family: 'Orbitron', sans-serif; font-size: 1.1rem; font-weight: 900; color: #38bdf8;">250 pts</span>
               </div>
-              <p style="font-size: 0.7rem; color: #94a3b8; margin: 4px 0 0 0;">Ritmo estándar con 80% de aciertos y tiempo regular.</p>
+              <small style="font-size: 0.66rem; color: #94a3b8; display: block; margin-top: 2px;">80% aciertos de tiro y tiempo estándar de navegación.</small>
             </div>
 
-            <!-- Worst Case -->
-            <div style="background: rgba(232,48,72,0.1); border: 1px solid rgba(232,48,72,0.3); border-radius: 10px; padding: 12px;">
+            <!-- Defensive -->
+            <div style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; padding: 10px;">
               <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 0.75rem; font-weight: 700; color: #ff5e6f;">PEOR ESCENARIO</span>
-                <span id="worstPoints" style="font-family: 'Orbitron', sans-serif; font-size: 1.05rem; font-weight: 900; color: #ff5e6f;">120 pts</span>
+                <span style="font-size: 0.72rem; font-weight: 700; color: #ef4444;">ESCENARIO DEFENSIVO</span>
+                <span id="worstPoints" style="font-family: 'Orbitron', sans-serif; font-size: 1.0rem; font-weight: 900; color: #ef4444;">130 pts</span>
               </div>
-              <p style="font-size: 0.7rem; color: #94a3b8; margin: 4px 0 0 0;">Defensa intensa o fallo de anclaje de escalada.</p>
+              <small style="font-size: 0.66rem; color: #94a3b8; display: block; margin-top: 2px;">Bajo acoso defensivo o pérdida de tiempo en anclaje.</small>
             </div>
 
           </div>
 
-          <!-- Multipliers Breakdown -->
-          <div style="margin-top: 15px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.1); font-size: 0.75rem; color: #94a3b8; display: flex; justify-content: space-between;">
-            <span>Multiplicador Escalada Alianza:</span>
-            <strong id="totalMultDisplay" style="color: #ffd700;">x1.60</strong>
+          <!-- Multiplier indicator -->
+          <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1); font-size: 0.74rem; color: #94a3b8; display: flex; justify-content: space-between; align-items: center;">
+            <span>Multiplicador de Escalada:</span>
+            <strong id="totalMultDisplay" style="color: #ffd700; font-size: 0.85rem;">x1.60</strong>
           </div>
         </div>
 
         <!-- Action Buttons -->
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-          <button id="saveStratBtn" class="primary-btn" style="width: 100%; padding: 12px; justify-content: center; background: linear-gradient(135deg, #ffd700, #ff8c28); color: #0a0c14; font-weight: 700; border-radius: 8px;">
-            💾 Guardar en Mi Playbook (Nube)
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <button id="testInSimBtn" class="primary-btn" style="width: 100%; padding: 12px; justify-content: center; background: linear-gradient(135deg, #ffd700, #ff8c28); color: #0a0c14; font-weight: 800; font-size: 0.85rem; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 14px rgba(255,215,0,0.25);">
+            🚀 Aplicar y Probar en Simulador 2D
           </button>
-          <button id="testInSimBtn" class="primary-btn" style="width: 100%; padding: 12px; justify-content: center; background: linear-gradient(135deg, #e83048, #c41e3a); color: #fff; font-weight: 700; border-radius: 8px;">
-            🚀 Probar en el Simulador 2D
+          <button id="saveStratBtn" class="primary-btn" style="width: 100%; padding: 10px; justify-content: center; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.18); color: #cbd5e1; font-weight: 600; font-size: 0.78rem; border-radius: 8px; cursor: pointer;">
+            💾 Guardar Táctica en Playbook Nube
           </button>
         </div>
 
         <!-- Saved Strategies Cloud List -->
         <div class="card">
           <div class="card-header">
-            <h3>MIS ESTRATEGIAS</h3>
+            <h3 style="font-size: 0.82rem;">MIS TÁCTICAS GUARDADAS</h3>
             <span class="badge" id="stratCountBadge">0</span>
           </div>
-          <div id="savedStratsList" style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto;">
-            <p style="font-size: 0.78rem; color: #94a3b8; text-align: center; padding: 15px 0;">Inicia sesión para guardar y sincronizar tus estrategias en la nube.</p>
+          <div id="savedStratsList" style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto;">
+            <p style="font-size: 0.74rem; color: #94a3b8; text-align: center; padding: 10px 0;">No tienes tácticas guardadas aún.</p>
           </div>
         </div>
 
