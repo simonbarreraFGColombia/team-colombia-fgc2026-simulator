@@ -35,10 +35,12 @@
         <div class="chatbot-window" id="chatbotWindow">
           <div class="chatbot-header">
             <div class="chatbot-title-area">
-              <div class="chatbot-avatar">🇨🇴</div>
+              <div class="chatbot-avatar" style="display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.06);">
+                <img src="logo_team_colombia.png" alt="Team Colombia" style="width: 26px; height: 26px; object-fit: contain;">
+              </div>
               <div class="chatbot-title">
                 <h4>ColBot AI</h4>
-                <span class="chatbot-status">FGC 2026 Engineering Strategist</span>
+                <span class="chatbot-status">Team Colombia Engineering Strategist</span>
               </div>
             </div>
             <button class="chatbot-close-btn" id="chatbotCloseBtn" aria-label="Close chat">✕</button>

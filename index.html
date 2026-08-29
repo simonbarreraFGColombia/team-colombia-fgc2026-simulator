@@ -363,11 +363,12 @@
     
     <!-- Top Header Navigation -->
     <header class="app-header">
-      <div class="logo-area notranslate" translate="no">
-        <span class="flag-stripe yellow"></span>
-        <span class="flag-stripe blue"></span>
-        <span class="flag-stripe red"></span>
-        <h1>TEAM COLOMBIA • FGC 2026</h1>
+      <div class="logo-area notranslate" translate="no" style="display: flex; align-items: center; gap: 10px;">
+        <img src="logo_team_colombia.png" alt="Team Colombia" class="header-logo-img" style="height: 34px; width: auto; object-fit: contain; filter: drop-shadow(0 2px 8px rgba(255,215,0,0.3));">
+        <div style="display: flex; flex-direction: column;">
+          <h1 style="font-size: 1rem; margin: 0; line-height: 1.1;">TEAM COLOMBIA • FGC 2026</h1>
+          <span style="font-size: 0.65rem; color: #94a3b8; letter-spacing: 0.5px;">OFFICIAL SIMULATOR PLATFORM</span>
+        </div>
       </div>
       
       <nav class="nav-area" id="headerNavArea" style="display: none;">
@@ -409,8 +410,8 @@
     <section class="hero-container-3d">
       <div>
         <div class="hero-badge-pill">
-          <svg class="icon-svg" viewBox="0 0 24 24" style="color: #ffd700;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-          <span>OFFICIAL STRATEGY & SIMULATION PLATFORM</span>
+          <img src="logo_team_colombia.png" alt="Team Colombia" style="height: 18px; width: auto; object-fit: contain;">
+          <span>OFFICIAL STRATEGY & SIMULATION PLATFORM • TEAM COLOMBIA</span>
         </div>
 
         <h2 class="hero-main-title">
@@ -421,6 +422,11 @@
         <p class="hero-main-desc">
           Complete engineering ecosystem for match score calculation, real-time 2D simulation with robot kinematics, alliance tactical planning, and AI assistance built for teams worldwide.
         </p>
+
+        <div style="display: inline-flex; align-items: center; gap: 8px; margin-bottom: 20px; padding: 4px 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,215,0,0.2); border-radius: 8px; font-size: 0.75rem; color: #94a3b8;">
+          <img src="logo_team_colombia.png" alt="Team Colombia" style="height: 16px; width: auto;">
+          <span class="notranslate" translate="no"><strong style="color: #ffd700;">Fundación Team Colombia</strong> • STEM & Robotics Initiative</span>
+        </div>
 
         <div class="hero-cta-group">
           <a href="simulacion.html" class="btn-action-hero primary auth-required-link">
@@ -596,13 +602,14 @@
     <footer class="app-footer-global">
       <div class="footer-top-grid">
         <div class="footer-brand-col">
-          <div class="logo-area" style="padding-left: 14px; margin-bottom: 12px;">
-            <span class="flag-stripe yellow"></span>
-            <span class="flag-stripe blue"></span>
-            <span class="flag-stripe red"></span>
-            <span style="font-family: var(--font-display); font-weight: 800; font-size: 1.1rem; color: #ffd700; letter-spacing: 1px;">
-              TEAM COLOMBIA • FGC 2026
-            </span>
+          <div class="notranslate" translate="no" style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+            <img src="logo_team_colombia.png" alt="Team Colombia Logo" style="height: 44px; width: auto; object-fit: contain; filter: drop-shadow(0 2px 10px rgba(0,0,0,0.6));">
+            <div style="display: flex; flex-direction: column;">
+              <span style="font-family: var(--font-display); font-weight: 800; font-size: 1.05rem; color: #ffd700; letter-spacing: 0.8px;">
+                TEAM COLOMBIA • FGC 2026
+              </span>
+              <span style="font-size: 0.7rem; color: #94a3b8;">Fundación Team Colombia • Robotics & STEM</span>
+            </div>
           </div>
           <p style="font-size: 0.82rem; color: #94a3b8; line-height: 1.6; max-width: 340px; margin: 0 0 14px 0;">
             Official strategy and engineering simulation platform for FIRST Global Challenge 2026 <em>Igniting Innovation</em> in Incheon, South Korea.
@@ -649,7 +656,13 @@
   <div class="auth-modal" id="authModal">
     <div class="auth-modal-content" style="max-width: 480px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <h3 style="margin: 0; font-family: var(--font-display); color: #ffd700; font-size: 1.15rem; font-weight: 700;">FGC Access & Profile Setup</h3>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <img src="logo_team_colombia.png" alt="Team Colombia" style="height: 32px; width: auto; object-fit: contain;">
+          <div>
+            <h3 style="margin: 0; font-family: var(--font-display); color: #ffd700; font-size: 1.05rem; font-weight: 700; line-height: 1.2;">FGC Access & Setup</h3>
+            <span style="font-size: 0.68rem; color: #94a3b8;">Team Colombia Platform Ecosystem</span>
+          </div>
+        </div>
         <button id="closeAuthModalBtn" style="background: transparent; border: none; color: #94a3b8; font-size: 20px; cursor: pointer;">✕</button>
       </div>
 
