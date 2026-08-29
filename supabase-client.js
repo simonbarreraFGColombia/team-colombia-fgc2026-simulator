@@ -277,18 +277,49 @@ const AuthService = {
       });
     } else {
       headerAuthArea.innerHTML = `
-        <button id="globalHeaderSignInBtn" class="primary-btn" style="padding: 7px 14px; font-size: 0.8rem;">
-          <svg class="icon-svg" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-          <span>Sign In</span>
-        </button>
+        <div class="header-auth-group">
+          <button id="globalHeaderSignInBtn" class="btn-header-signin" type="button">
+            <svg style="width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.2;" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4m-5-4 5-5-5-5m5 5H3"/></svg>
+            <span>Sign In</span>
+          </button>
+          <button id="globalHeaderSignUpBtn" class="btn-header-signup" type="button">
+            <svg style="width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.2;" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+            <span>Sign Up</span>
+          </button>
+        </div>
       `;
       document.getElementById('globalHeaderSignInBtn')?.addEventListener('click', () => {
         const modal = document.getElementById('authModal');
         if (modal) {
+          const tabLogin = document.getElementById('tabLoginBtn');
+          const tabRegister = document.getElementById('tabRegisterBtn');
+          const loginForm = document.getElementById('loginForm');
+          const registerForm = document.getElementById('registerForm');
+          if (tabLogin) tabLogin.classList.add('active');
+          if (tabRegister) tabRegister.classList.remove('active');
+          if (loginForm) loginForm.style.display = 'block';
+          if (registerForm) registerForm.style.display = 'none';
           modal.classList.add('active');
         } else {
           sessionStorage.setItem('fgc_redirect_after_auth', window.location.href);
           window.location.href = 'index.html?auth=open';
+        }
+      });
+      document.getElementById('globalHeaderSignUpBtn')?.addEventListener('click', () => {
+        const modal = document.getElementById('authModal');
+        if (modal) {
+          const tabLogin = document.getElementById('tabLoginBtn');
+          const tabRegister = document.getElementById('tabRegisterBtn');
+          const loginForm = document.getElementById('loginForm');
+          const registerForm = document.getElementById('registerForm');
+          if (tabRegister) tabRegister.classList.add('active');
+          if (tabLogin) tabLogin.classList.remove('active');
+          if (registerForm) registerForm.style.display = 'block';
+          if (loginForm) loginForm.style.display = 'none';
+          modal.classList.add('active');
+        } else {
+          sessionStorage.setItem('fgc_redirect_after_auth', window.location.href);
+          window.location.href = 'index.html?auth=register';
         }
       });
     }
@@ -392,6 +423,26 @@ const AuthService = {
     return { user: this.currentUser, profile: profileData };
   },
 
+  checkProfileBanStatus(profile) {
+    if (!profile) return false;
+    if (profile.is_locked) {
+      if (profile.banned_until) {
+        const until = new Date(profile.banned_until).getTime();
+        if (Date.now() < until) {
+          const dateStr = new Date(profile.banned_until).toLocaleString();
+          throw new Error(`🚫 Tu cuenta está suspendida temporalmente hasta: ${dateStr}. Motivo: ${profile.lock_reason || 'Revisión técnica'}`);
+        } else {
+          profile.is_locked = false;
+          profile.banned_until = null;
+          profile.lock_reason = null;
+        }
+      } else {
+        throw new Error(`🚫 Tu cuenta ha sido suspendida permanentemente por administración. Motivo: ${profile.lock_reason || 'Infracción de directrices FGC'}`);
+      }
+    }
+    return false;
+  },
+
   async signIn(email, password) {
     if (!supabaseClient) throw new Error("Supabase no inicializado.");
     const { data, error } = await supabaseClient.auth.signInWithPassword({
@@ -415,6 +466,7 @@ const AuthService = {
         this.currentProfile = fbProfile;
         localStorage.setItem('fgc_active_profile', JSON.stringify(fbProfile));
       }
+      this.checkProfileBanStatus(this.currentProfile);
       this.notifyListeners();
     }
     return data;
@@ -1055,6 +1107,62 @@ const AdminAuthService = {
     sessionStorage.removeItem('fgc_admin_auth_token');
     sessionStorage.removeItem('fgc_admin_auth_expiry');
     sessionStorage.removeItem('fgc_admin_auth_time');
+  },
+
+  async banUser(userId, { reason = 'Violación de directrices FGC 2026', durationHours = 24 } = {}) {
+    if (!this.isAuthorized()) throw new Error("Acceso restringido: no autorizado.");
+    const isPermanent = (durationHours === -1 || durationHours === 999999);
+    const bannedUntil = isPermanent ? null : new Date(Date.now() + (durationHours * 60 * 60 * 1000)).toISOString();
+    
+    if (supabaseClient) {
+      const updatePayload = {
+        is_locked: true,
+        lock_reason: reason,
+        banned_until: bannedUntil,
+        updated_at: new Date().toISOString()
+      };
+      const { error } = await supabaseClient
+        .from('profiles')
+        .update(updatePayload)
+        .eq('id', userId);
+      if (error) throw error;
+    }
+    return { success: true, is_locked: true, banned_until: bannedUntil, lock_reason: reason };
+  },
+
+  async unbanUser(userId) {
+    if (!this.isAuthorized()) throw new Error("Acceso restringido: no autorizado.");
+    if (supabaseClient) {
+      const { error } = await supabaseClient
+        .from('profiles')
+        .update({
+          is_locked: false,
+          lock_reason: null,
+          banned_until: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+      if (error) throw error;
+    }
+    return { success: true, is_locked: false };
+  },
+
+  async deleteUser(userId) {
+    if (!this.isAuthorized()) throw new Error("Acceso restringido: no autorizado.");
+    if (supabaseClient) {
+      try {
+        await supabaseClient.from('match_telemetry').delete().eq('user_id', userId);
+      } catch (e) {}
+      try {
+        await supabaseClient.from('robot_configs').delete().eq('user_id', userId);
+      } catch (e) {}
+      try {
+        await supabaseClient.from('user_strategies').delete().eq('user_id', userId);
+      } catch (e) {}
+      const { error } = await supabaseClient.from('profiles').delete().eq('id', userId);
+      if (error) throw error;
+    }
+    return { success: true };
   }
 };
 

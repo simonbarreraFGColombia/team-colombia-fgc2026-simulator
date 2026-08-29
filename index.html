@@ -363,10 +363,13 @@
     
     <!-- Top Header Navigation -->
     <header class="app-header">
-      <div class="logo-area notranslate" translate="no" style="display: flex; align-items: center; gap: 10px;">
-        <img src="logo_team_colombia.png" alt="Team Colombia" class="header-logo-img" style="height: 34px; width: auto; object-fit: contain; filter: drop-shadow(0 2px 8px rgba(255,215,0,0.3));">
+      <div class="logo-area notranslate" translate="no">
+        <span class="flag-stripe yellow"></span>
+        <span class="flag-stripe blue"></span>
+        <span class="flag-stripe red"></span>
+        <img src="logo_team_colombia.png" alt="Team Colombia" class="header-logo-img">
         <div style="display: flex; flex-direction: column;">
-          <h1 style="font-size: 1rem; margin: 0; line-height: 1.1;">TEAM COLOMBIA • FGC 2026</h1>
+          <h1>TEAM COLOMBIA • FGC 2026</h1>
           <span style="font-size: 0.65rem; color: #94a3b8; letter-spacing: 0.5px;">OFFICIAL SIMULATOR PLATFORM</span>
         </div>
       </div>
@@ -378,12 +381,9 @@
         <a href="calculadora.html" class="nav-link auth-required-link">Calculator</a>
       </nav>
 
-      <div style="display: flex; align-items: center; gap: 12px;">
+      <div class="header-right-group" style="display: flex; align-items: center; gap: 10px;">
         <div id="headerAuthArea">
-          <button id="openAuthModalBtn" class="primary-btn" style="padding: 7px 14px; font-size: 0.8rem;">
-            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-            <span>Sign In</span>
-          </button>
+          <!-- Dynamically populated: Lang Picker -> Sign In -> Sign Up -->
         </div>
       </div>
     </header>

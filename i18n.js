@@ -584,14 +584,16 @@ const I18nManager = {
       </div>
     `;
 
+    const rightGroup = document.querySelector('.header-right-group');
+    const authArea = document.getElementById('headerAuthArea');
     const header = document.querySelector('.app-header');
-    if (header) {
-      const nav = header.querySelector('.nav-area');
-      if (nav) {
-        header.insertBefore(container, nav.nextSibling || nav);
-      } else {
-        header.appendChild(container);
-      }
+
+    if (rightGroup && authArea) {
+      rightGroup.insertBefore(container, authArea);
+    } else if (header && authArea) {
+      header.insertBefore(container, authArea);
+    } else if (header) {
+      header.appendChild(container);
     } else {
       document.body.appendChild(container);
     }

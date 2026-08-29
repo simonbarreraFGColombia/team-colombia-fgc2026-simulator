@@ -21,10 +21,16 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   role TEXT NOT NULL DEFAULT 'student' CHECK (role IN ('student', 'mentor', 'driver', 'engineer', 'admin')),
   is_locked BOOLEAN NOT NULL DEFAULT FALSE,
   lock_reason TEXT,
+  banned_until TIMESTAMPTZ,
   avatar_url TEXT DEFAULT 'pilot',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Idempotent column additions for existing installations
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS banned_until TIMESTAMPTZ;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_locked BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS lock_reason TEXT;
 
 -- 2. TABLA: MATCH_TELEMETRY (Telemetría de Partidos y Espionaje Táctico)
 CREATE TABLE IF NOT EXISTS public.match_telemetry (
@@ -172,11 +178,17 @@ CREATE POLICY "Public Insert Profiles" ON public.profiles FOR INSERT WITH CHECK 
 DROP POLICY IF EXISTS "Public Update Profiles" ON public.profiles;
 CREATE POLICY "Public Update Profiles" ON public.profiles FOR UPDATE USING (true);
 
+DROP POLICY IF EXISTS "Public Delete Profiles" ON public.profiles;
+CREATE POLICY "Public Delete Profiles" ON public.profiles FOR DELETE USING (true);
+
 DROP POLICY IF EXISTS "Public Read Telemetry" ON public.match_telemetry;
 CREATE POLICY "Public Read Telemetry" ON public.match_telemetry FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Public Insert Telemetry" ON public.match_telemetry;
 CREATE POLICY "Public Insert Telemetry" ON public.match_telemetry FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public Delete Telemetry" ON public.match_telemetry;
+CREATE POLICY "Public Delete Telemetry" ON public.match_telemetry FOR DELETE USING (true);
 
 DROP POLICY IF EXISTS "Public Read Robot Configs" ON public.robot_configs;
 CREATE POLICY "Public Read Robot Configs" ON public.robot_configs FOR SELECT USING (true);
@@ -184,8 +196,14 @@ CREATE POLICY "Public Read Robot Configs" ON public.robot_configs FOR SELECT USI
 DROP POLICY IF EXISTS "Public Upsert Robot Configs" ON public.robot_configs;
 CREATE POLICY "Public Upsert Robot Configs" ON public.robot_configs FOR ALL USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Public Delete Robot Configs" ON public.robot_configs;
+CREATE POLICY "Public Delete Robot Configs" ON public.robot_configs FOR DELETE USING (true);
+
 DROP POLICY IF EXISTS "Public Read Strategies" ON public.user_strategies;
 CREATE POLICY "Public Read Strategies" ON public.user_strategies FOR SELECT USING (true);
 
 DROP POLICY IF EXISTS "Public Upsert Strategies" ON public.user_strategies;
 CREATE POLICY "Public Upsert Strategies" ON public.user_strategies FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public Delete Strategies" ON public.user_strategies;
+CREATE POLICY "Public Delete Strategies" ON public.user_strategies FOR DELETE USING (true);

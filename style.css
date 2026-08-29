@@ -113,22 +113,94 @@ select, input { font-family: inherit; }
 .logo-area {
   position: relative;
   display: flex;
-  flex-direction: column;
-  padding-left: 16px;
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  padding-left: 14px;
 }
 
 .logo-area h1 {
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 1.35rem;
-  letter-spacing: 1.5px;
+  font-size: 1.15rem;
+  letter-spacing: 1px;
   color: #ffd700;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.header-logo-img {
+  height: 46px;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 10px rgba(255, 215, 0, 0.4));
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.header-logo-img:hover {
+  transform: scale(1.05);
 }
 
 .flag-stripe { position: absolute; left: 0; width: 4px; border-radius: 2px; }
 .flag-stripe.yellow { top: 0; height: 50%; background: var(--col-yellow); }
 .flag-stripe.blue { top: 50%; height: 25%; background: var(--col-blue); }
 .flag-stripe.red { top: 75%; height: 25%; background: var(--col-red); }
+
+/* Header Auth Buttons Styling */
+.header-auth-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-header-signin {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 215, 0, 0.08);
+  border: 1px solid rgba(255, 215, 0, 0.35);
+  color: #ffd700;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 7px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-header-signin:hover {
+  background: rgba(255, 215, 0, 0.16);
+  border-color: #ffd700;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(255, 215, 0, 0.2);
+}
+
+.btn-header-signup {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #ffd700 0%, #f59e0b 100%);
+  border: 1px solid #ffd700;
+  color: #0a0c14;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.78rem;
+  padding: 7px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(255, 215, 0, 0.25);
+}
+
+.btn-header-signup:hover {
+  background: linear-gradient(135deg, #ffea75 0%, #fbbf24 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
+}
 
 .nav-area { display: flex; align-items: center; gap: 10px; }
 

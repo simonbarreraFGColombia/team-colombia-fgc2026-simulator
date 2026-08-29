@@ -308,8 +308,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const climbLabel = rc.climber_type === 'buddy_carrier' ? '🤝 Buddy Carrier' : 
                         (rc.climber_type === 'buddy_piggyback' ? '🪝 Piggyback' : '🧗 Solo');
 
+      const isBanned = t.is_locked || (t.banned_until && new Date(t.banned_until).getTime() > Date.now());
+      const banBadge = isBanned ? `<span style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #ef4444; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 700; display: inline-block; margin-top: 3px;">🚫 BANEADO</span>` : '';
+
       return `
-        <tr>
+        <tr style="${isBanned ? 'opacity: 0.75; background: rgba(239,68,68,0.03);' : ''}">
           <td style="font-family: var(--font-mono); color: #64748b;">${idx + 1}</td>
           
           <td>
@@ -326,6 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="user-cell">
               <strong>@${SecurityUtils.sanitizeText(t.username)}</strong>
               <span class="role-badge ${t.role}">${t.role === 'mentor' ? '🛡️ Mentor' : '🎓 Student'}</span>
+              ${banBadge}
             </div>
           </td>
 
@@ -372,9 +376,23 @@ document.addEventListener('DOMContentLoaded', () => {
           </td>
 
           <td>
-            <button type="button" class="btn-inspect-team" data-index="${idx}">
-              🔍 Espiar
-            </button>
+            <div style="display: flex; gap: 4px; align-items: center;">
+              <button type="button" class="btn-inspect-team" data-index="${idx}" title="Ver Inteligencia">
+                🔍
+              </button>
+              ${isBanned ? `
+                <button type="button" class="btn-quick-unban" data-id="${t.id}" data-user="${t.username}" style="background: rgba(16, 185, 129, 0.15); border: 1px solid #10b981; color: #10b981; padding: 4px 6px; border-radius: 6px; cursor: pointer; font-size: 0.75rem;" title="Desbanear Usuario">
+                  🔓
+                </button>
+              ` : `
+                <button type="button" class="btn-quick-ban" data-id="${t.id}" data-user="${t.username}" style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #ef4444; padding: 4px 6px; border-radius: 6px; cursor: pointer; font-size: 0.75rem;" title="Suspender Usuario">
+                  🚫
+                </button>
+              `}
+              <button type="button" class="btn-quick-del" data-id="${t.id}" data-user="${t.username}" style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #fff; padding: 4px 6px; border-radius: 6px; cursor: pointer; font-size: 0.75rem;" title="Eliminar Usuario">
+                🗑️
+              </button>
+            </div>
           </td>
         </tr>
       `;
@@ -386,6 +404,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const teamIndex = parseInt(btn.dataset.index);
         const teamObj = filtered[teamIndex];
         if (teamObj) openInspectionModal(teamObj);
+      });
+    });
+
+    // Attach quick ban listeners
+    espionageTableBody.querySelectorAll('.btn-quick-ban').forEach(btn => {
+      btn.addEventListener('click', () => {
+        openBanModal(btn.dataset.id, btn.dataset.user);
+      });
+    });
+
+    // Attach quick unban listeners
+    espionageTableBody.querySelectorAll('.btn-quick-unban').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await handleUnbanUser(btn.dataset.id, btn.dataset.user);
+      });
+    });
+
+    // Attach quick delete listeners
+    espionageTableBody.querySelectorAll('.btn-quick-del').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await handleDeleteUser(btn.dataset.id, btn.dataset.user);
       });
     });
   }
@@ -415,11 +454,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ═════════════════════════════════════════════════════════════
-  // 4. DEEP ESPIONAGE INSPECTION MODAL
+  // 4. DEEP ESPIONAGE INSPECTION MODAL & MODERATION
   // ═════════════════════════════════════════════════════════════
+
+  let currentInspectedTeam = null;
 
   function openInspectionModal(team) {
     if (!inspectionModal) return;
+    currentInspectedTeam = team;
     const cInfo = getCountryInfo(team.country_code);
     const rc = team.robot_config || RobotConfigService.getDefaultConfig();
 
@@ -434,6 +476,27 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('modalAvatar').textContent = `${(AVATAR_PRESETS.find(a=>a.id===team.avatar_url)?.icon || '🤖')} ${team.avatar_url || 'pilot'}`;
     document.getElementById('modalMatchesCount').textContent = team.total_matches || (team.matches ? team.matches.length : 0);
     document.getElementById('modalBestScore').textContent = `${team.best_score || 0} pts`;
+
+    // Moderation Status
+    const isBanned = team.is_locked || (team.banned_until && new Date(team.banned_until).getTime() > Date.now());
+    const statusEl = document.getElementById('modalUserBanStatus');
+    const reasonEl = document.getElementById('modalUserBanReason');
+    const btnBan = document.getElementById('modalBtnBanUser');
+    const btnUnban = document.getElementById('modalBtnUnbanUser');
+
+    if (isBanned) {
+      const untilStr = team.banned_until ? `hasta ${new Date(team.banned_until).toLocaleString()}` : 'Permanente';
+      statusEl.innerHTML = `🚫 <span style="color: #ef4444;">SUSPENDIDO (${untilStr})</span>`;
+      reasonEl.style.display = 'block';
+      reasonEl.textContent = `Motivo: ${team.lock_reason || 'Infracción de directrices'}`;
+      if (btnBan) btnBan.textContent = '✏️ Modificar Sanción';
+      if (btnUnban) btnUnban.style.display = 'inline-flex';
+    } else {
+      statusEl.innerHTML = `✅ <span style="color: #10b981;">Activo / Sin Sanciones</span>`;
+      reasonEl.style.display = 'none';
+      if (btnBan) btnBan.textContent = '🚫 Suspender / Banear';
+      if (btnUnban) btnUnban.style.display = 'none';
+    }
 
     // Dimensions & Blueprint
     const initVol = (rc.initial_volume_cm3 || (rc.initial_length_cm * rc.initial_width_cm * rc.initial_height_cm) || 81000).toLocaleString();
@@ -486,6 +549,115 @@ document.addEventListener('DOMContentLoaded', () => {
 
     inspectionModal.style.display = 'flex';
   }
+
+  // ═════════════════════════════════════════════════════════════
+  // 5. BAN & MODERATION ACTION HANDLERS
+  // ═════════════════════════════════════════════════════════════
+
+  const banModal = document.getElementById('banModal');
+  const banForm = document.getElementById('banForm');
+  const banTargetUserId = document.getElementById('banTargetUserId');
+  const banModalUserTarget = document.getElementById('banModalUserTarget');
+  const btnCancelBanModal = document.getElementById('btnCancelBanModal');
+  const btnDismissBan = document.getElementById('btnDismissBan');
+
+  function openBanModal(userId, username) {
+    if (!banModal) return;
+    banTargetUserId.value = userId;
+    banModalUserTarget.textContent = `@${username || 'usuario'}`;
+    banModal.style.display = 'flex';
+  }
+
+  function closeBanModal() {
+    if (banModal) banModal.style.display = 'none';
+  }
+
+  if (btnCancelBanModal) btnCancelBanModal.addEventListener('click', closeBanModal);
+  if (btnDismissBan) btnDismissBan.addEventListener('click', closeBanModal);
+
+  if (banForm) {
+    banForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const userId = banTargetUserId.value;
+      const hours = parseInt(document.getElementById('banDurationSelect').value);
+      const reason = document.getElementById('banReasonInput').value.trim();
+
+      try {
+        const btn = document.getElementById('btnConfirmBan');
+        btn.disabled = true;
+        btn.textContent = 'Aplicando...';
+        await AdminAuthService.banUser(userId, { reason, durationHours: hours });
+        
+        // Update local state
+        const target = allTeamsData.find(t => t.id === userId);
+        if (target) {
+          target.is_locked = true;
+          target.lock_reason = reason;
+          target.banned_until = hours === -1 ? null : new Date(Date.now() + (hours * 3600000)).toISOString();
+        }
+        
+        closeBanModal();
+        renderTable();
+        if (currentInspectedTeam && currentInspectedTeam.id === userId) {
+          openInspectionModal(target || currentInspectedTeam);
+        }
+        alert('✅ Sanción aplicada correctamente.');
+      } catch (err) {
+        alert('⚠️ Error al sancionar usuario: ' + err.message);
+      } finally {
+        const btn = document.getElementById('btnConfirmBan');
+        btn.disabled = false;
+        btn.textContent = 'Aplicar Suspensión';
+      }
+    });
+  }
+
+  async function handleUnbanUser(userId, username) {
+    if (!confirm(`¿Deseas levantar la suspensión y restaurar el acceso completo a @${username}?`)) return;
+    try {
+      await AdminAuthService.unbanUser(userId);
+      const target = allTeamsData.find(t => t.id === userId);
+      if (target) {
+        target.is_locked = false;
+        target.lock_reason = null;
+        target.banned_until = null;
+      }
+      renderTable();
+      if (currentInspectedTeam && currentInspectedTeam.id === userId) {
+        openInspectionModal(target || currentInspectedTeam);
+      }
+      alert(`✅ Suspensión removida de @${username}.`);
+    } catch (err) {
+      alert('⚠️ Error al desbanear: ' + err.message);
+    }
+  }
+
+  async function handleDeleteUser(userId, username) {
+    if (!confirm(`⚠️ ATENCIÓN: ¿Estás seguro de ELIMINAR permanentemente a @${username} y toda su telemetría y configuraciones de robot?\n\nEsta acción no se puede deshacer.`)) return;
+    try {
+      await AdminAuthService.deleteUser(userId);
+      allTeamsData = allTeamsData.filter(t => t.id !== userId);
+      if (inspectionModal) inspectionModal.style.display = 'none';
+      computeGlobalKPIs();
+      renderTable();
+      alert(`🗑️ Usuario @${username} y todos sus registros han sido eliminados de la base de datos.`);
+    } catch (err) {
+      alert('⚠️ Error al eliminar usuario: ' + err.message);
+    }
+  }
+
+  // Modal Moderation Buttons
+  document.getElementById('modalBtnBanUser')?.addEventListener('click', () => {
+    if (currentInspectedTeam) openBanModal(currentInspectedTeam.id, currentInspectedTeam.username);
+  });
+
+  document.getElementById('modalBtnUnbanUser')?.addEventListener('click', () => {
+    if (currentInspectedTeam) handleUnbanUser(currentInspectedTeam.id, currentInspectedTeam.username);
+  });
+
+  document.getElementById('modalBtnDeleteUser')?.addEventListener('click', () => {
+    if (currentInspectedTeam) handleDeleteUser(currentInspectedTeam.id, currentInspectedTeam.username);
+  });
 
   if (btnCloseModal) {
     btnCloseModal.addEventListener('click', () => {
