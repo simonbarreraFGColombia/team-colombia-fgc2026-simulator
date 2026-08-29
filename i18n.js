@@ -491,8 +491,18 @@ const I18nManager = {
   originalNodes: new Map(), // Element/TextNode -> Original baseline English string
   cache: {}, // langCode -> { text: translation }
 
+  _CACHE_VERSION: 'v3',
+
   init() {
-    // 1. Recover saved language (Default: English)
+    // 1. Clear corrupted translation cache from previous batch translation engine
+    const cacheVer = localStorage.getItem('fgc_trans_ver');
+    if (cacheVer !== this._CACHE_VERSION) {
+      localStorage.removeItem('fgc_trans_cache');
+      localStorage.setItem('fgc_trans_ver', this._CACHE_VERSION);
+      this.cache = {};
+    }
+
+    // 2. Recover saved language (Default: English)
     const saved = localStorage.getItem('fgc_lang') || 'en';
     this.currentLang = saved;
 
@@ -642,37 +652,45 @@ const I18nManager = {
   },
 
   async applyLanguage(code, isUserAction = false) {
-    const langObj = FGC_LANGUAGES.find(l => l.code === code) || FGC_LANGUAGES[0];
-    this.currentLang = langObj.code;
-    localStorage.setItem('fgc_lang', this.currentLang);
+    try {
+      const langObj = FGC_LANGUAGES.find(l => l.code === code) || FGC_LANGUAGES[0];
+      this.currentLang = langObj.code;
+      localStorage.setItem('fgc_lang', this.currentLang);
 
-    const flagEl = document.getElementById('currentLangFlag');
-    const nameEl = document.getElementById('currentLangName');
-    if (flagEl) flagEl.textContent = langObj.flag;
-    if (nameEl) nameEl.textContent = langObj.code.toUpperCase();
+      const flagEl = document.getElementById('currentLangFlag');
+      const nameEl = document.getElementById('currentLangName');
+      if (flagEl) flagEl.textContent = langObj.flag;
+      if (nameEl) nameEl.textContent = langObj.code.toUpperCase();
 
-    document.querySelectorAll('.lang-item').forEach(el => {
-      el.classList.toggle('selected', el.dataset.code === code);
-    });
+      document.querySelectorAll('.lang-item').forEach(el => {
+        el.classList.toggle('selected', el.dataset.code === code);
+      });
 
-    // Support RTL for Arabic, Urdu, Persian, Hebrew
-    const isRtl = ['ar', 'ur', 'fa', 'he', 'iw'].includes(code);
-    document.documentElement.dir = isRtl ? 'rtl' : 'ltr';
+      // Support RTL for Arabic, Urdu, Persian, Hebrew
+      const isRtl = ['ar', 'ur', 'fa', 'he', 'iw'].includes(code);
+      document.documentElement.dir = isRtl ? 'rtl' : 'ltr';
 
-    if (code === 'en') {
+      // Always restore to clean English baseline first
       this.restoreEnglish();
+
+      if (code === 'en') {
+        window.__FGC_ACTIVE_LANG = langObj;
+        return;
+      }
+
+      // 1. Apply cached translations
+      const dict = this.cache[code] || {};
+      this.translateDOMWithDict(dict);
+
+      // 2. Fetch missing phrases using Google Translate Neural Client API
+      await this.fetchMissingTranslations(code);
+
       window.__FGC_ACTIVE_LANG = langObj;
-      return;
+    } catch (err) {
+      console.error('Language switch error:', err);
+      // Safety fallback: restore English if translation fails
+      this.restoreEnglish();
     }
-
-    // 1. Check if we have complete translation in memory/cache
-    const dict = this.cache[code] || {};
-    this.translateDOMWithDict(dict);
-
-    // 2. Fetch any missing phrases using Google Translate Neural Client API
-    await this.fetchMissingTranslations(code);
-
-    window.__FGC_ACTIVE_LANG = langObj;
   },
 
   restoreEnglish() {
@@ -691,28 +709,30 @@ const I18nManager = {
   },
 
   translateDOMWithDict(dict) {
-    if (!dict) return;
+    if (!dict || typeof dict !== 'object') return;
 
     this.originalNodes.forEach((origVal, node) => {
       if (!node || !node.parentNode) return;
       const trimmed = origVal.trim();
       if (!trimmed) return;
 
-      if (dict[trimmed]) {
-        node.nodeValue = origVal.replace(trimmed, dict[trimmed]);
+      const translated = dict[trimmed];
+      // Safety: never replace with empty/whitespace/undefined values
+      if (translated && typeof translated === 'string' && translated.trim().length > 0) {
+        node.nodeValue = origVal.replace(trimmed, translated);
       }
     });
 
     document.querySelectorAll('[placeholder]').forEach(el => {
       const orig = el.__i18nPlaceholderOrig || el.placeholder;
-      if (orig && dict[orig]) {
+      if (orig && dict[orig] && dict[orig].trim().length > 0) {
         el.placeholder = dict[orig];
       }
     });
 
     document.querySelectorAll('[title]').forEach(el => {
       const orig = el.__i18nTitleOrig || el.title;
-      if (orig && dict[orig]) {
+      if (orig && dict[orig] && dict[orig].trim().length > 0) {
         el.title = dict[orig];
       }
     });
