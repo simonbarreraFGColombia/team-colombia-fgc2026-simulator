@@ -26,14 +26,14 @@
       grid-template-columns: 1.2fr 0.8fr;
       gap: 30px;
       align-items: center;
-      background: #0f121e;
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: radial-gradient(circle at 82% 45%, rgba(255, 69, 0, 0.18) 0%, rgba(255, 140, 0, 0.08) 35%, transparent 65%), linear-gradient(135deg, #101424 0%, #090b12 100%);
+      border: 1px solid rgba(255, 140, 0, 0.25);
       border-radius: 20px;
       padding: 40px 35px;
       margin-bottom: 30px;
       position: relative;
       overflow: hidden;
-      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5), 0 0 35px rgba(255, 69, 0, 0.06);
     }
 
     @media (max-width: 960px) {
@@ -514,6 +514,31 @@
 
     </div>
 
+    <!-- Country Delegation & Representation Official Notice -->
+    <section class="country-disclaimer-card" style="
+      background: linear-gradient(135deg, rgba(255, 107, 0, 0.08) 0%, rgba(17, 21, 37, 0.95) 100%);
+      border: 1px solid rgba(255, 107, 0, 0.35);
+      border-radius: 16px;
+      padding: 18px 24px;
+      margin-bottom: 25px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    ">
+      <div style="font-size: 1.8rem; background: rgba(255,107,0,0.15); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        ⚠️
+      </div>
+      <div style="flex: 1;">
+        <h4 style="margin: 0 0 4px 0; font-family: var(--font-display); font-size: 0.92rem; color: #ff9e0b; font-weight: 700;">
+          Aviso sobre Delegaciones y Países • Country Representation Notice
+        </h4>
+        <p style="margin: 0; font-size: 0.82rem; color: #cbd5e1; line-height: 1.5;">
+          Los países que no aparecen en la lista es debido a que no figuran en el listado oficial de FIRST Global. Si tu país participará en Incheon 2026 o consideras que nos equivocamos, por favor escríbenos directamente por mensaje directo (DM) en Instagram a <a href="https://instagram.com/firstglobalcolombia" target="_blank" rel="noopener noreferrer" style="color: #ffd700; font-weight: 700; text-decoration: underline;">@firstglobalcolombia</a> y los agregaremos de inmediato.
+        </p>
+      </div>
+    </section>
+
     <!-- Complete Global Leaderboard -->
     <section class="leaderboard-full-card">
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
@@ -663,6 +688,9 @@
             <select id="regCountry" class="form-input" style="background: #131728;" required>
               <!-- Populated from FGC_COUNTRIES -->
             </select>
+            <small style="display: block; font-size: 0.7rem; color: #94a3b8; margin-top: 4px; line-height: 1.2;">
+              ¿Falta tu país? Escríbenos a <a href="https://instagram.com/firstglobalcolombia" target="_blank" style="color: #ffd700;">@firstglobalcolombia</a>
+            </small>
           </div>
         </div>
 

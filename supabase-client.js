@@ -25,7 +25,9 @@ try {
   console.warn("Supabase client init fallback:", e);
 }
 
-// ── 1. FGC WORLD COUNTRIES CATALOG (Excluding North Korea) ─────────
+// ── 1. FGC WORLD COUNTRIES CATALOG (Excluding Surinam, Islandia, Suiza, Arabia Saudita, Kuwait, Armenia, Chipre, Nueva Zelanda, Andorra, Corea del Norte) ─────────
+const EXCLUDED_COUNTRY_CODES = new Set(['SR', 'IS', 'CH', 'SA', 'KW', 'AM', 'CY', 'NZ', 'AD', 'KP']);
+
 const FGC_COUNTRIES = [
   { code: 'CO', name: 'Colombia', flag: '🇨🇴' },
   { code: 'US', name: 'United States', flag: '🇺🇸' },
@@ -61,17 +63,14 @@ const FGC_COUNTRIES = [
   { code: 'VN', name: 'Vietnam', flag: '🇻🇳' },
   { code: 'MY', name: 'Malaysia', flag: '🇲🇾' },
   { code: 'SG', name: 'Singapore', flag: '🇸🇬' },
-  { code: 'NZ', name: 'New Zealand', flag: '🇳🇿' },
   { code: 'EG', name: 'Egypt', flag: '🇪🇬' },
   { code: 'NG', name: 'Nigeria', flag: '🇳🇬' },
   { code: 'KE', name: 'Kenya', flag: '🇰🇪' },
   { code: 'MA', name: 'Morocco', flag: '🇲🇦' },
   { code: 'AE', name: 'United Arab Emirates', flag: '🇦🇪' },
-  { code: 'SA', name: 'Saudi Arabia', flag: '🇸🇦' },
   { code: 'IL', name: 'Israel', flag: '🇮🇱' },
   { code: 'GR', name: 'Greece', flag: '🇬🇷' },
   { code: 'PT', name: 'Portugal', flag: '🇵🇹' },
-  { code: 'CH', name: 'Switzerland', flag: '🇨🇭' },
   { code: 'AT', name: 'Austria', flag: '🇦🇹' },
   { code: 'BE', name: 'Belgium', flag: '🇧🇪' },
   { code: 'DK', name: 'Denmark', flag: '🇩🇰' },
@@ -85,12 +84,10 @@ const FGC_COUNTRIES = [
   { code: 'RS', name: 'Serbia', flag: '🇷🇸' },
   { code: 'SK', name: 'Slovakia', flag: '🇸🇰' },
   { code: 'SI', name: 'Slovenia', flag: '🇸🇮' },
-  { code: 'IS', name: 'Iceland', flag: '🇮🇸' },
   { code: 'EE', name: 'Estonia', flag: '🇪🇪' },
   { code: 'LV', name: 'Latvia', flag: '🇱🇻' },
   { code: 'LT', name: 'Lithuania', flag: '🇱🇹' },
   { code: 'GE', name: 'Georgia', flag: '🇬🇪' },
-  { code: 'AM', name: 'Armenia', flag: '🇦🇲' },
   { code: 'AZ', name: 'Azerbaijan', flag: '🇦🇿' },
   { code: 'UZ', name: 'Uzbekistan', flag: '🇺🇿' },
   { code: 'MN', name: 'Mongolia', flag: '🇲🇳' },
@@ -124,13 +121,11 @@ const FGC_COUNTRIES = [
   { code: 'JO', name: 'Jordan', flag: '🇯🇴' },
   { code: 'LB', name: 'Lebanon', flag: '🇱🇧' },
   { code: 'QA', name: 'Qatar', flag: '🇶🇦' },
-  { code: 'KW', name: 'Kuwait', flag: '🇰🇼' },
   { code: 'OM', name: 'Oman', flag: '🇴🇲' },
   { code: 'BH', name: 'Bahrain', flag: '🇧🇭' },
-  { code: 'CY', name: 'Cyprus', flag: '🇨🇾' },
   { code: 'MT', name: 'Malta', flag: '🇲🇹' },
   { code: 'LU', name: 'Luxembourg', flag: '🇱🇺' }
-];
+].filter(c => !EXCLUDED_COUNTRY_CODES.has(c.code));
 
 // Profile Avatar Presets (STEM & Robotics Themed)
 const AVATAR_PRESETS = [
