@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FGC 2026 Platform • Igniting Innovation - Team Colombia</title>
   <link rel="icon" type="image/png" href="favicon.png">
   
-  <!-- Friendly & Highly Legible Modern Google Fonts -->
+  <!-- Clean, Refined Inter Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="chatbot.css">
@@ -20,7 +20,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
   <style>
-    /* Hero 3D Layout */
+    /* 3D Hero Section Layout */
     .hero-container-3d {
       display: grid;
       grid-template-columns: 1.2fr 0.8fr;
@@ -28,12 +28,12 @@
       align-items: center;
       background: #0f121e;
       border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 24px;
+      border-radius: 20px;
       padding: 40px 35px;
-      margin-bottom: 35px;
+      margin-bottom: 30px;
       position: relative;
       overflow: hidden;
-      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5);
     }
 
     @media (max-width: 960px) {
@@ -42,7 +42,7 @@
         padding: 30px 20px;
       }
       #hero3dContainer {
-        height: 260px !important;
+        height: 250px !important;
       }
     }
 
@@ -54,21 +54,21 @@
       border: 1px solid rgba(255, 215, 0, 0.35);
       color: #ffd700;
       font-size: 0.78rem;
-      font-weight: 700;
+      font-weight: 600;
       padding: 6px 14px;
       border-radius: 20px;
       margin-bottom: 18px;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.3px;
     }
 
     .hero-main-title {
-      font-size: 2.5rem;
+      font-size: 2.4rem;
       font-family: var(--font-display);
       font-weight: 800;
       color: #ffffff;
-      margin: 0 0 16px 0;
-      line-height: 1.18;
-      letter-spacing: -0.5px;
+      margin: 0 0 14px 0;
+      line-height: 1.2;
+      letter-spacing: -0.025em;
     }
 
     .hero-main-title .highlight {
@@ -78,8 +78,8 @@
     .hero-main-desc {
       font-size: 0.95rem;
       color: #94a3b8;
-      line-height: 1.65;
-      margin: 0 0 28px 0;
+      line-height: 1.6;
+      margin: 0 0 26px 0;
     }
 
     .hero-cta-group {
@@ -94,7 +94,7 @@
       gap: 8px;
       padding: 12px 22px;
       border-radius: 10px;
-      font-weight: 700;
+      font-weight: 600;
       font-size: 0.88rem;
       text-decoration: none;
       transition: all 0.2s ease;
@@ -106,19 +106,19 @@
       background: #ffd700;
       color: #0a0c14;
       border: 1px solid #ffd700;
-      box-shadow: 0 4px 18px rgba(255, 215, 0, 0.3);
+      box-shadow: 0 4px 18px rgba(255, 215, 0, 0.25);
     }
 
     .btn-action-hero.primary:hover {
       background: #ffea75;
       transform: translateY(-2px);
-      box-shadow: 0 6px 24px rgba(255, 215, 0, 0.45);
+      box-shadow: 0 6px 24px rgba(255, 215, 0, 0.4);
     }
 
     .btn-action-hero.secondary {
       background: rgba(255, 255, 255, 0.06);
       color: #ffffff;
-      border: 1px solid rgba(255, 255, 255, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.16);
     }
 
     .btn-action-hero.secondary:hover {
@@ -141,8 +141,8 @@
       background: linear-gradient(135deg, rgba(51, 119, 255, 0.12) 0%, rgba(15, 18, 30, 0.95) 100%);
       border: 1px solid rgba(51, 119, 255, 0.35);
       border-radius: 18px;
-      padding: 24px 28px;
-      margin-bottom: 35px;
+      padding: 22px 28px;
+      margin-bottom: 30px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -153,14 +153,14 @@
     .manual-info {
       display: flex;
       align-items: center;
-      gap: 18px;
+      gap: 16px;
       flex: 1;
       min-width: 280px;
     }
 
     .manual-icon-box {
-      width: 52px;
-      height: 52px;
+      width: 50px;
+      height: 50px;
       border-radius: 12px;
       background: rgba(51, 119, 255, 0.2);
       border: 1px solid rgba(51, 119, 255, 0.4);
@@ -172,10 +172,11 @@
     }
 
     .manual-text h3 {
-      font-size: 1.1rem;
+      font-size: 1.08rem;
       color: #ffffff;
       margin: 0 0 4px 0;
       font-family: var(--font-display);
+      font-weight: 700;
     }
 
     .manual-text p {
@@ -190,24 +191,25 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
       flex-wrap: wrap;
       gap: 10px;
     }
 
     .section-heading-clean h2 {
-      font-size: 1.4rem;
+      font-size: 1.3rem;
       font-family: var(--font-display);
       font-weight: 700;
       color: #ffffff;
       margin: 0;
+      letter-spacing: -0.02em;
     }
 
     .modules-layout {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 20px;
-      margin-bottom: 40px;
+      margin-bottom: 35px;
     }
 
     .module-box {
@@ -241,8 +243,9 @@
     }
 
     .module-box h3 {
-      font-size: 1.15rem;
+      font-size: 1.12rem;
       font-family: var(--font-display);
+      font-weight: 700;
       color: #ffffff;
       margin: 0 0 8px 0;
     }
@@ -255,12 +258,12 @@
       flex: 1;
     }
 
-    /* Leaderboard Full Card */
+    /* Leaderboard Card */
     .leaderboard-full-card {
       background: #111422;
       border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 20px;
-      padding: 28px;
+      border-radius: 18px;
+      padding: 26px;
       margin-bottom: 40px;
     }
 
@@ -283,7 +286,7 @@
       color: #fff;
       font-size: 0.82rem;
       font-family: inherit;
-      width: 240px;
+      width: 260px;
       outline: none;
     }
 
@@ -291,7 +294,6 @@
       border-color: #ffd700;
     }
 
-    /* Inline Vector Icons */
     .icon-svg {
       display: inline-block;
       width: 18px;
@@ -319,16 +321,16 @@
       
       <nav class="nav-area">
         <a href="index.html" class="nav-link active">Portal</a>
-        <a href="simulacion.html" class="nav-link">Simulador 2D</a>
-        <a href="estrategias.html" class="nav-link">Playbook Táctico</a>
-        <a href="calculadora.html" class="nav-link">Calculadora</a>
+        <a href="simulacion.html" class="nav-link">2D Simulator</a>
+        <a href="estrategias.html" class="nav-link">Tactical Playbook</a>
+        <a href="calculadora.html" class="nav-link">Calculator</a>
       </nav>
 
       <div style="display: flex; align-items: center; gap: 12px;">
         <div id="headerAuthArea">
           <button id="openAuthModalBtn" class="primary-btn" style="padding: 7px 14px; font-size: 0.8rem;">
             <svg class="icon-svg" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-            <span>Iniciar Sesión</span>
+            <span>Sign In</span>
           </button>
         </div>
       </div>
@@ -340,15 +342,15 @@
         <span class="user-flag" id="userFlag" style="font-size: 20px;">🇨🇴</span>
         <div class="user-details">
           <strong id="userTeamName" style="color: #ffd700; font-size: 0.95rem;">Team Colombia</strong>
-          <span id="userSubtitle" style="color: #94a3b8; font-size: 0.75rem;">Equipo Oficial • FGC 2026 Incheon</span>
+          <span id="userSubtitle" style="color: #94a3b8; font-size: 0.75rem;">Official Team • FGC 2026 Incheon</span>
         </div>
       </div>
       <div style="display: flex; gap: 10px; align-items: center;">
         <span class="badge" style="background: rgba(45,210,100,0.15); color: #2dd264;">
           <svg class="icon-svg" style="width: 14px; height: 14px;" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
-          <span>Sesión Activa</span>
+          <span>Active Session</span>
         </span>
-        <button id="logoutBtn" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #94a3b8; font-size: 0.75rem; padding: 6px 12px; border-radius: 6px; cursor: pointer;">Cerrar Sesión</button>
+        <button id="logoutBtn" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #94a3b8; font-size: 0.75rem; padding: 6px 12px; border-radius: 6px; cursor: pointer;">Sign Out</button>
       </div>
     </div>
 
@@ -357,7 +359,7 @@
       <div>
         <div class="hero-badge-pill">
           <svg class="icon-svg" viewBox="0 0 24 24" style="color: #ffd700;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-          <span>PLATAFORMA OFICIAL DE SIMULACIÓN Y ESTRATEGIA</span>
+          <span>OFFICIAL STRATEGY & SIMULATION PLATFORM</span>
         </div>
 
         <h2 class="hero-main-title">
@@ -366,30 +368,30 @@
         </h2>
 
         <p class="hero-main-desc">
-          Ecosistema integral de ingeniería para el cálculo de juego, simulación 2D en tiempo real con física de robots, diseño táctico de alianzas y asistencia de Inteligencia Artificial desarrollado para los equipos del mundo.
+          Complete engineering ecosystem for match score calculation, real-time 2D simulation with robot kinematics, alliance tactical planning, and AI assistance built for teams worldwide.
         </p>
 
         <div class="hero-cta-group">
           <a href="simulacion.html" class="btn-action-hero primary">
             <svg class="icon-svg" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h4m-2-2v4m10-2h.01m-3 0h.01"></polygon></svg>
-            <span>Entrar al Simulador 2D</span>
+            <span>Launch 2D Simulator</span>
           </a>
           <a href="estrategias.html" class="btn-action-hero secondary">
             <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"></path><path d="M12 6v6l4 2"></path></svg>
-            <span>Diseñador de Estrategias</span>
+            <span>Strategy Playbook</span>
           </a>
           <a href="calculadora.html" class="btn-action-hero secondary">
             <svg class="icon-svg" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="8" y1="10" x2="16" y2="10"></line><line x1="8" y1="14" x2="16" y2="14"></line></svg>
-            <span>Calculadora de Puntos</span>
+            <span>Score Calculator</span>
           </a>
         </div>
       </div>
 
       <!-- Right 3D Interactive Canvas -->
       <div>
-        <div id="hero3dContainer" title="Arrastra el cursor para interactuar con la llave mecánica 3D"></div>
+        <div id="hero3dContainer" title="Drag mouse to interact with the photorealistic 3D mechanical tools"></div>
         <div style="text-align: center; font-size: 0.72rem; color: #64748b;">
-          ⚙️ Renderizado interactivo en tiempo real • Three.js WebGL
+          Real-time interactive rendering • Three.js WebGL
         </div>
       </div>
     </section>
@@ -401,20 +403,20 @@
           <svg class="icon-svg" style="width: 26px; height: 26px;" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
         </div>
         <div class="manual-text">
-          <h3>Manual Oficial de Juego — FGC 2026 Incheon</h3>
-          <p>Consulta las reglas oficiales, dimensiones de la cancha de 7x7m, especificaciones de la rampa, zonas de escalada y reglamento de inspección de robots.</p>
+          <h3>Official Game Manual — FGC 2026 Incheon</h3>
+          <p>Access the official rules, 7x7m arena layout, ramp specifications, climbing zones, and robot inspection requirements.</p>
         </div>
       </div>
       <a href="https://docs.google.com/document/d/1fYKh2XSMgDdOu3pxXMvx29dB3nTfZcnNdmGRpooyznU/view?tab=t.0" target="_blank" rel="noopener noreferrer" class="btn-action-hero secondary" style="background: rgba(51, 119, 255, 0.2); border-color: rgba(51, 119, 255, 0.5); color: #fff;">
-        <span>Abrir Manual Oficial (Google Docs)</span>
+        <span>Open Official Manual (Google Docs)</span>
         <svg class="icon-svg" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
       </a>
     </section>
 
     <!-- Modules Grid -->
     <div class="section-heading-clean">
-      <h2>Módulos del Ecosistema</h2>
-      <span style="font-size: 0.8rem; color: #94a3b8;">Herramientas integradas para competidores y mentores</span>
+      <h2>Engineering Modules</h2>
+      <span style="font-size: 0.8rem; color: #94a3b8;">Integrated tools for competitors, drivers, and mentors</span>
     </div>
 
     <div class="modules-layout">
@@ -425,13 +427,13 @@
           <div class="module-icon-svg">
             <svg class="icon-svg" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h4m-2-2v4m10-2h.01m-3 0h.01"></polygon></svg>
           </div>
-          <h3>Simulador 2D en Vivo</h3>
+          <h3>Live 2D Match Simulator</h3>
           <p>
-            Partidos en tiempo real de 2:30 con física de colisiones, tiro a la Suppression Unit, mecanismo extensible <strong>Linear Motion</strong>, gancho de anclaje y escalada en 3 zonas con soporte para mandos USB PlayStation / Xbox.
+            Real-time 2:30 matches with rigid-body collision physics, Suppression Unit shooting, <strong>Linear Motion</strong> mechanism extension, and 3-zone climbing with dual USB gamepad support.
           </p>
         </div>
         <a href="simulacion.html" class="primary-btn" style="text-decoration: none; justify-content: center; text-align: center;">
-          <span>Abrir Simulador</span>
+          <span>Open Simulator</span>
         </a>
       </div>
 
@@ -441,13 +443,13 @@
           <div class="module-icon-svg" style="color: #ff8c28;">
             <svg class="icon-svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
           </div>
-          <h3>Playbook Táctico de Alianza</h3>
+          <h3>Alliance Tactical Playbook</h3>
           <p>
-            Taller interactivo de diseño estratégico. Asigna roles a los 3 robots de la alianza, optimiza el rol del Human Player y calcula proyecciones matemáticas guardadas en la nube.
+            Collaborative alliance strategy workshop. Assign tactical roles to all 3 robots, optimize Human Player cycles, and sync live telemetry models.
           </p>
         </div>
         <a href="estrategias.html" class="primary-btn" style="text-decoration: none; justify-content: center; text-align: center; background: #ffd700; color: #0a0c14;">
-          <span>Diseñar Estrategia</span>
+          <span>Design Strategy</span>
         </a>
       </div>
 
@@ -457,13 +459,13 @@
           <div class="module-icon-svg" style="color: #38bdf8;">
             <svg class="icon-svg" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="8" y1="10" x2="16" y2="10"></line><line x1="8" y1="14" x2="16" y2="14"></line></svg>
           </div>
-          <h3>Calculadora Oficial de Puntos</h3>
+          <h3>Official Scoring Calculator</h3>
           <p>
-            Motor matemático de validación con todas las reglas de FGC 2026. Calcula escenarios regionales, bonificaciones de alianza cooperativa y multiplicadores de escalada.
+            Rulebook mathematical validation engine. Evaluate regional match scenarios, cooperative alliance ranking points, and climbing multipliers.
           </p>
         </div>
         <a href="calculadora.html" class="primary-btn" style="text-decoration: none; justify-content: center; text-align: center; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2);">
-          <span>Abrir Calculadora</span>
+          <span>Open Calculator</span>
         </a>
       </div>
 
@@ -473,21 +475,21 @@
     <section class="leaderboard-full-card">
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
         <div>
-          <h2 style="font-size: 1.3rem; font-family: var(--font-display); color: #ffffff; margin: 0 0 4px 0;">
-            Tabla de Clasificación Mundial
+          <h2 style="font-size: 1.3rem; font-family: var(--font-display); color: #ffffff; margin: 0 0 4px 0; font-weight: 700;">
+            Global Leaderboard & Match Records
           </h2>
-          <span style="font-size: 0.8rem; color: #94a3b8;">Puntuaciones récord verificadas de equipos en competencia</span>
+          <span style="font-size: 0.8rem; color: #94a3b8;">Verified scores recorded in competition from the database</span>
         </div>
         <a href="simulacion.html" style="color: #ffd700; font-size: 0.82rem; font-weight: 600; text-decoration: none;">
-          Competir y Registrar Puntaje ➔
+          Play & Submit Record ➔
         </a>
       </div>
 
       <div class="lb-filters-bar">
-        <input type="text" id="lbSearch" class="lb-search-input" placeholder="Buscar por equipo o país...">
+        <input type="text" id="lbSearch" class="lb-search-input" placeholder="Filter by team name or country...">
         <div style="display: flex; gap: 8px;">
           <span class="badge" style="background: rgba(255,215,0,0.15); color: #ffd700;">Global FGC 2026</span>
-          <span class="badge" style="background: rgba(45,210,100,0.15); color: #2dd264;">En Vivo</span>
+          <span class="badge" style="background: rgba(45,210,100,0.15); color: #2dd264;">Live Sync</span>
         </div>
       </div>
 
@@ -495,16 +497,16 @@
         <table class="lb-table" style="width: 100%;">
           <thead>
             <tr>
-              <th style="width: 60px;">Rango</th>
-              <th>Equipo / Institución</th>
-              <th>País</th>
-              <th>Número</th>
-              <th>Partidos</th>
-              <th>Puntaje Récord</th>
+              <th style="width: 60px;">Rank</th>
+              <th>Team / Institution</th>
+              <th>Country</th>
+              <th>Number</th>
+              <th>Matches</th>
+              <th>Record Score</th>
             </tr>
           </thead>
           <tbody id="leaderboardTbody">
-            <!-- Dynamically populated -->
+            <!-- Dynamically populated from Supabase LeaderboardService -->
           </tbody>
         </table>
       </div>
@@ -512,72 +514,73 @@
 
   </div>
 
-  <!-- Authentication Modal -->
+  <!-- Authentication Modal (Fixed Overlay) -->
   <div class="auth-modal" id="authModal">
     <div class="auth-modal-content">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <h3 style="margin: 0; font-family: var(--font-display); color: #ffd700; font-size: 1.15rem;">Portal de Acceso FGC</h3>
+        <h3 style="margin: 0; font-family: var(--font-display); color: #ffd700; font-size: 1.15rem; font-weight: 700;">FGC Access Portal</h3>
         <button id="closeAuthModalBtn" style="background: transparent; border: none; color: #94a3b8; font-size: 20px; cursor: pointer;">✕</button>
       </div>
 
       <div class="auth-tabs">
-        <button class="auth-tab-btn active" id="tabLoginBtn">Iniciar Sesión</button>
-        <button class="auth-tab-btn" id="tabRegisterBtn">Registrar Equipo</button>
+        <button class="auth-tab-btn active" id="tabLoginBtn">Sign In</button>
+        <button class="auth-tab-btn" id="tabRegisterBtn">Register Team</button>
       </div>
 
       <!-- Login Form -->
       <form id="loginForm">
         <div class="form-group">
-          <label>Correo Electrónico</label>
-          <input type="email" id="loginEmail" class="form-input" placeholder="tu-equipo@ejemplo.com" required>
+          <label>Email Address</label>
+          <input type="email" id="loginEmail" class="form-input" placeholder="team@example.com" required>
         </div>
         <div class="form-group">
-          <label>Contraseña</label>
+          <label>Password</label>
           <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required>
         </div>
         <button type="submit" id="submitLoginBtn" class="primary-btn" style="width: 100%; justify-content: center; padding: 12px; margin-top: 10px;">
-          Ingresar a la Plataforma
+          Enter Platform
         </button>
       </form>
 
       <!-- Register Form -->
       <form id="registerForm" style="display: none;">
         <div class="form-group">
-          <label>Nombre del Equipo / Institución</label>
-          <input type="text" id="regTeamName" class="form-input" placeholder="Ej. Team Mexico / Aztech" required maxlength="50">
+          <label>Team Name / Institution</label>
+          <input type="text" id="regTeamName" class="form-input" placeholder="e.g. Team Mexico / Aztech" required maxlength="50">
         </div>
         <div style="display: flex; gap: 10px;">
           <div class="form-group" style="flex: 1;">
-            <label>País (ISO)</label>
+            <label>Country (ISO)</label>
             <select id="regCountry" class="form-input" style="background: #131728;">
               <option value="CO">Colombia 🇨🇴</option>
-              <option value="MX">México 🇲🇽</option>
-              <option value="US">Estados Unidos 🇺🇸</option>
-              <option value="DE">Alemania 🇩🇪</option>
-              <option value="KZ">Kazajistán 🇰🇿</option>
-              <option value="BR">Brasil 🇧🇷</option>
+              <option value="US">United States 🇺🇸</option>
+              <option value="MX">Mexico 🇲🇽</option>
+              <option value="DE">Germany 🇩🇪</option>
+              <option value="KZ">Kazakhstan 🇰🇿</option>
+              <option value="BR">Brazil 🇧🇷</option>
               <option value="AR">Argentina 🇦🇷</option>
-              <option value="CA">Canadá 🇨🇦</option>
-              <option value="JP">Japón 🇯🇵</option>
-              <option value="KR">Corea del Sur 🇰🇷</option>
-              <option value="OTHER">Otro País 🌐</option>
+              <option value="CA">Canada 🇨🇦</option>
+              <option value="JP">Japan 🇯🇵</option>
+              <option value="KR">South Korea 🇰🇷</option>
+              <option value="FR">France 🇫🇷</option>
+              <option value="OTHER">Other Country 🌐</option>
             </select>
           </div>
           <div class="form-group" style="flex: 1;">
-            <label>Número FGC / FRC</label>
+            <label>Team Number</label>
             <input type="text" id="regTeamNumber" class="form-input" placeholder="#108" maxlength="15">
           </div>
         </div>
         <div class="form-group">
-          <label>Correo Electrónico</label>
-          <input type="email" id="regEmail" class="form-input" placeholder="capitan@tu-equipo.org" required>
+          <label>Email Address</label>
+          <input type="email" id="regEmail" class="form-input" placeholder="captain@team.org" required>
         </div>
         <div class="form-group">
-          <label>Contraseña</label>
-          <input type="password" id="regPassword" class="form-input" placeholder="Mínimo 6 caracteres" required minlength="6">
+          <label>Password</label>
+          <input type="password" id="regPassword" class="form-input" placeholder="Minimum 6 characters" required minlength="6">
         </div>
         <button type="submit" id="submitRegisterBtn" class="primary-btn" style="width: 100%; justify-content: center; padding: 12px; margin-top: 10px; background: #ffd700; color: #0a0c14;">
-          Crear Cuenta y Guardar Récords
+          Create Account & Save Records
         </button>
       </form>
     </div>
@@ -588,7 +591,7 @@
   <script src="i18n.js"></script>
   <script src="hero3d.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       const authModal = document.getElementById('authModal');
       const openBtn = document.getElementById('openAuthModalBtn');
       const closeBtn = document.getElementById('closeAuthModalBtn');
@@ -625,15 +628,15 @@
         const submitBtn = document.getElementById('submitLoginBtn');
         try {
           submitBtn.disabled = true;
-          submitBtn.textContent = 'Verificando...';
+          submitBtn.textContent = 'Verifying...';
           await AuthService.signIn(email, pass);
           authModal.classList.remove('active');
-          alert('✓ ¡Bienvenido de vuelta!');
+          alert('✓ Welcome back!');
         } catch (err) {
           alert('⚠️ ' + err.message);
         } finally {
           submitBtn.disabled = false;
-          submitBtn.textContent = 'Ingresar a la Plataforma';
+          submitBtn.textContent = 'Enter Platform';
         }
       });
 
@@ -648,19 +651,19 @@
 
         try {
           submitBtn.disabled = true;
-          submitBtn.textContent = 'Creando cuenta...';
+          submitBtn.textContent = 'Creating account...';
           await AuthService.signUp(email, pass, {
             teamName,
             countryCode: country,
             teamNumber: number
           });
           authModal.classList.remove('active');
-          alert('✓ ¡Cuenta registrada exitosamente!');
+          alert('✓ Account registered successfully!');
         } catch (err) {
           alert('⚠️ ' + err.message);
         } finally {
           submitBtn.disabled = false;
-          submitBtn.textContent = 'Crear Cuenta y Guardar Récords';
+          submitBtn.textContent = 'Create Account & Save Records';
         }
       });
 
@@ -674,11 +677,10 @@
         if (user && profile) {
           if (userBanner) userBanner.style.display = 'flex';
           if (headerAuthArea) headerAuthArea.innerHTML = `
-            <span style="font-size: 0.85rem; color: #ffd700; font-weight: 700; font-family: var(--font-display);">
+            <span style="font-size: 0.85rem; color: #ffd700; font-weight: 600; font-family: var(--font-display);">
               ${SecurityUtils.sanitizeText(profile.team_name)}
             </span>
           `;
-          const flagEl = document.getElementById('userFlag');
           const nameEl = document.getElementById('userTeamName');
           const subEl = document.getElementById('userSubtitle');
           if (nameEl) nameEl.textContent = profile.team_name;
@@ -687,55 +689,44 @@
           if (userBanner) userBanner.style.display = 'none';
           if (headerAuthArea) headerAuthArea.innerHTML = `
             <button id="openAuthModalBtn" class="primary-btn" style="padding: 7px 14px; font-size: 0.8rem;">
-              <span>Iniciar Sesión</span>
+              <span>Sign In</span>
             </button>
           `;
           document.getElementById('openAuthModalBtn')?.addEventListener('click', () => authModal.classList.add('active'));
         }
       });
 
-      // Complete Global Leaderboard dataset
-      const GLOBAL_TEAMS_DATA = [
-        { rank: 1, team_name: 'Team Colombia', country: 'Colombia 🇨🇴', number: '#108', matches: 34, score: 540 },
-        { rank: 2, team_name: 'Team Mexico', country: 'México 🇲🇽', number: '#142', matches: 28, score: 495 },
-        { rank: 3, team_name: 'Team Germany', country: 'Alemania 🇩🇪', number: '#56', matches: 25, score: 480 },
-        { rank: 4, team_name: 'Team Kazakhstan', country: 'Kazajistán 🇰🇿', number: '#88', matches: 22, score: 465 },
-        { rank: 5, team_name: 'Team USA', country: 'Estados Unidos 🇺🇸', number: '#01', matches: 31, score: 460 },
-        { rank: 6, team_name: 'Team South Korea', country: 'Corea del Sur 🇰🇷', number: '#190', matches: 29, score: 455 },
-        { rank: 7, team_name: 'Team Brazil', country: 'Brasil 🇧🇷', number: '#77', matches: 20, score: 440 },
-        { rank: 8, team_name: 'Team Japan', country: 'Japón 🇯🇵', number: '#112', matches: 24, score: 435 },
-        { rank: 9, team_name: 'Team Canada', country: 'Canadá 🇨🇦', number: '#33', matches: 18, score: 430 },
-        { rank: 10, team_name: 'Team Argentina', country: 'Argentina 🇦🇷', number: '#64', matches: 16, score: 420 },
-        { rank: 11, team_name: 'Team France', country: 'Francia 🇫🇷', number: '#45', matches: 19, score: 415 },
-        { rank: 12, team_name: 'Team Australia', country: 'Australia 🇦🇺', number: '#21', matches: 15, score: 410 },
-        { rank: 13, team_name: 'Team India', country: 'India 🇮🇳', number: '#105', matches: 27, score: 405 },
-        { rank: 14, team_name: 'Team South Africa', country: 'Sudáfrica 🇿🇦', number: '#92', matches: 14, score: 395 },
-        { rank: 15, team_name: 'Team Italy', country: 'Italia 🇮🇹', number: '#51', matches: 17, score: 390 }
-      ];
+      // Load Real Leaderboard from Database
+      let currentLeaderboard = [];
+      try {
+        currentLeaderboard = await LeaderboardService.getLeaderboard(50);
+      } catch (err) {
+        console.error("Leaderboard loading error:", err);
+      }
 
       function renderLeaderboardTable(filterText = '') {
         const tbody = document.getElementById('leaderboardTbody');
         if (!tbody) return;
         const q = filterText.toLowerCase().trim();
-        const filtered = GLOBAL_TEAMS_DATA.filter(t => 
-          t.team_name.toLowerCase().includes(q) || 
-          t.country.toLowerCase().includes(q) || 
-          t.number.toLowerCase().includes(q)
+        const filtered = currentLeaderboard.filter(t => 
+          (t.team_name && t.team_name.toLowerCase().includes(q)) || 
+          (t.country_code && t.country_code.toLowerCase().includes(q)) || 
+          (t.team_number && t.team_number.toLowerCase().includes(q))
         );
 
         if (filtered.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #94a3b8; padding: 20px;">No se encontraron equipos coincidentes.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #94a3b8; padding: 20px;">No matching team records found.</td></tr>';
           return;
         }
 
         tbody.innerHTML = filtered.map(item => `
           <tr>
             <td class="lb-rank" style="color: ${item.rank <= 3 ? '#ffd700' : '#94a3b8'}; font-weight: 700;">#${item.rank}</td>
-            <td style="font-weight: 600; color: #fff;">${item.team_name}</td>
-            <td>${item.country}</td>
-            <td style="color: #94a3b8;">${item.number}</td>
-            <td>${item.matches}</td>
-            <td><strong style="color: #2dd264; font-size: 0.95rem;">${item.score} pts</strong></td>
+            <td style="font-weight: 600; color: #fff;">${SecurityUtils.sanitizeText(item.team_name)}</td>
+            <td>${item.country_code || 'CO'}</td>
+            <td style="color: #94a3b8;">${item.team_number || '#--'}</td>
+            <td>${item.matches_played || 1}</td>
+            <td><strong style="color: #2dd264; font-size: 0.95rem;">${item.best_score || item.final_score || 0} pts</strong></td>
           </tr>
         `).join('');
       }

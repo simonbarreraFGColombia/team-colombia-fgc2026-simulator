@@ -5,8 +5,8 @@
  */
 
 const FGC_LANGUAGES = [
-  { code: 'es', name: 'Español', native: 'Español', flag: '🇪🇸' },
   { code: 'en', name: 'English', native: 'English', flag: '🇺🇸' },
+  { code: 'es', name: 'Spanish', native: 'Español', flag: '🇪🇸' },
   { code: 'ko', name: 'Korean', native: '한국어', flag: '🇰🇷' },
   { code: 'fr', name: 'French', native: 'Français', flag: '🇫🇷' },
   { code: 'de', name: 'German', native: 'Deutsch', flag: '🇩🇪' },
@@ -63,7 +63,7 @@ const FGC_LANGUAGES = [
 ];
 
 const I18nManager = {
-  currentLang: localStorage.getItem('fgc_lang') || 'es',
+  currentLang: localStorage.getItem('fgc_lang') || 'en',
   isOpen: false,
 
   init() {
@@ -84,12 +84,12 @@ const I18nManager = {
     window.googleTranslateElementInit = () => {
       if (window.google && window.google.translate) {
         new window.google.translate.TranslateElement({
-          pageLanguage: 'es',
+          pageLanguage: 'en',
           autoDisplay: false,
           layout: window.google.translate.TranslateElement.InlineLayout.SIMPLE
         }, 'google_translate_element');
         
-        if (this.currentLang && this.currentLang !== 'es') {
+        if (this.currentLang && this.currentLang !== 'en') {
           setTimeout(() => this.triggerGoogleTranslate(this.currentLang), 600);
         }
       }
@@ -236,7 +236,7 @@ const I18nManager = {
   },
 
   setTranslateCookie(code) {
-    const val = code === 'es' ? '/es/es' : `/es/${code}`;
+    const val = code === 'en' ? '/en/en' : `/en/${code}`;
     const domain = window.location.hostname;
     document.cookie = `googtrans=${val}; path=/; domain=${domain}`;
     document.cookie = `googtrans=${val}; path=/;`;
