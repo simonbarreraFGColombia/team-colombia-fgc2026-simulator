@@ -670,6 +670,9 @@ const I18nManager = {
       const isRtl = ['ar', 'ur', 'fa', 'he', 'iw'].includes(code);
       document.documentElement.dir = isRtl ? 'rtl' : 'ltr';
 
+      // Re-index any new DOM nodes
+      this.indexDOM();
+
       // Always restore to clean English baseline first
       this.restoreEnglish();
 

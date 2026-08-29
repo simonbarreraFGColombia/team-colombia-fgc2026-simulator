@@ -204,27 +204,31 @@ const AuthService = {
       try { this.currentProfile = JSON.parse(cached); } catch (e) {}
     }
 
-    if (!supabaseClient) return;
-    try {
-      const { data: { session } } = await supabaseClient.auth.getSession();
-      if (session?.user) {
-        this.currentUser = session.user;
-        await this.loadProfile(session.user.id);
-      }
-      
-      supabaseClient.auth.onAuthStateChange(async (event, session) => {
-        this.currentUser = session?.user || null;
-        if (this.currentUser) {
-          await this.loadProfile(this.currentUser.id);
-        } else {
-          this.currentProfile = null;
-          localStorage.removeItem('fgc_active_profile');
+    if (supabaseClient) {
+      try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session?.user) {
+          this.currentUser = session.user;
+          await this.loadProfile(session.user.id);
         }
-        this.notifyListeners();
-      });
-    } catch (e) {
-      console.warn("Auth initialization error:", e);
+        
+        supabaseClient.auth.onAuthStateChange(async (event, session) => {
+          this.currentUser = session?.user || null;
+          if (this.currentUser) {
+            await this.loadProfile(this.currentUser.id);
+          } else {
+            this.currentProfile = null;
+            localStorage.removeItem('fgc_active_profile');
+          }
+          this.notifyListeners();
+        });
+      } catch (e) {
+        console.warn("Auth initialization error:", e);
+      }
     }
+
+    // Always update global header UI immediately on init
+    this.notifyListeners();
   },
 
   subscribe(listener) {
@@ -235,7 +239,59 @@ const AuthService = {
   },
 
   notifyListeners() {
-    this.listeners.forEach(fn => fn(this.currentUser, this.currentProfile));
+    this.updateGlobalHeaderAuthUI(this.currentUser, this.currentProfile);
+    this.listeners.forEach(fn => {
+      try { fn(this.currentUser, this.currentProfile); } catch (e) {}
+    });
+  },
+
+  updateGlobalHeaderAuthUI(user, profile) {
+    const headerAuthArea = document.getElementById('headerAuthArea');
+    const headerNavArea = document.getElementById('headerNavArea');
+    const p = window.location.pathname.toLowerCase();
+    const isLanding = p.endsWith('index.html') || p === '/' || p === '' || (!p.includes('simulacion') && !p.includes('estrategias') && !p.includes('calculadora') && !p.includes('scouting') && !p.includes('adminmastersecrete'));
+
+    if (headerNavArea && isLanding) {
+      headerNavArea.style.display = profile ? 'flex' : 'none';
+    }
+
+    if (!headerAuthArea) return;
+
+    if (profile) {
+      const cInfo = (typeof getCountryInfo === 'function') ? getCountryInfo(profile.country_code) : { flag: '🇨🇴', name: 'Colombia' };
+      const avObj = (typeof AVATAR_PRESETS !== 'undefined') ? (AVATAR_PRESETS.find(a => a.id === profile.avatar_url) || AVATAR_PRESETS[0]) : { icon: '🤖', bg: '#3b82f6' };
+
+      headerAuthArea.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.06); padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(255,215,0,0.2);">
+          <span style="font-size: 1.1rem;">${avObj.icon}</span>
+          <div style="display: flex; flex-direction: column; text-align: left;">
+            <span style="font-size: 0.78rem; font-weight: 700; color: #ffd700; line-height: 1.1;">@${profile.username || 'User'} ${cInfo.flag}</span>
+            <span style="font-size: 0.68rem; color: #94a3b8; line-height: 1.1;">${profile.team_name}</span>
+          </div>
+          <button id="globalHeaderLogoutBtn" style="background: transparent; border: none; color: #ef4444; font-size: 0.75rem; cursor: pointer; padding: 2px 4px; margin-left: 4px;" title="Sign Out">✕</button>
+        </div>
+      `;
+      document.getElementById('globalHeaderLogoutBtn')?.addEventListener('click', async () => {
+        await AuthService.signOut();
+        window.location.href = 'index.html';
+      });
+    } else {
+      headerAuthArea.innerHTML = `
+        <button id="globalHeaderSignInBtn" class="primary-btn" style="padding: 7px 14px; font-size: 0.8rem;">
+          <svg class="icon-svg" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          <span>Sign In</span>
+        </button>
+      `;
+      document.getElementById('globalHeaderSignInBtn')?.addEventListener('click', () => {
+        const modal = document.getElementById('authModal');
+        if (modal) {
+          modal.classList.add('active');
+        } else {
+          sessionStorage.setItem('fgc_redirect_after_auth', window.location.href);
+          window.location.href = 'index.html?auth=open';
+        }
+      });
+    }
   },
 
   getUserProfile() {
@@ -278,40 +334,62 @@ const AuthService = {
   },
 
   async signUp(email, password, { username, teamName, countryCode, role = 'student', avatarUrl = 'pilot' }) {
-    if (!supabaseClient) throw new Error("Supabase no inicializado.");
     const cleanUser = SecurityUtils.sanitizeText(username, 30) || 'Player_' + Math.floor(Math.random()*1000);
     const cleanTeam = SecurityUtils.sanitizeText(teamName, 50) || `Team ${cleanUser}`;
     const cleanCountry = (countryCode || 'CO').toUpperCase().slice(0, 2);
     const cleanRole = role === 'mentor' ? 'mentor' : 'student';
 
-    const { data, error } = await supabaseClient.auth.signUp({
-      email: email.trim(),
-      password: password
-    });
+    let userObj = null;
 
-    if (error) throw error;
-    if (data.user) {
-      const profileData = {
-        id: data.user.id,
-        email: email.trim(),
-        username: cleanUser,
-        team_name: cleanTeam,
-        country_code: cleanCountry,
-        role: cleanRole,
-        avatar_url: avatarUrl || 'pilot'
-      };
-
+    if (supabaseClient) {
       try {
-        const { error: pError } = await supabaseClient.from('profiles').insert(profileData);
-        if (pError) console.warn("Profile table insert notice:", pError.message);
-      } catch (e) {}
-
-      this.currentProfile = profileData;
-      localStorage.setItem('fgc_active_profile', JSON.stringify(profileData));
-      this.currentUser = data.user;
-      this.notifyListeners();
+        const { data, error } = await supabaseClient.auth.signUp({
+          email: email.trim(),
+          password: password
+        });
+        if (error && !error.message.includes('already')) {
+          throw error;
+        }
+        userObj = data?.user || null;
+      } catch (e) {
+        console.warn("Supabase signUp warning:", e);
+        if (e.message?.toLowerCase().includes('already')) {
+          const { data: signData, error: signErr } = await supabaseClient.auth.signInWithPassword({
+            email: email.trim(),
+            password: password
+          });
+          if (signErr) throw signErr;
+          userObj = signData?.user || null;
+        } else {
+          throw e;
+        }
+      }
     }
-    return data;
+
+    const profileId = userObj?.id || ('local_' + Date.now());
+    const profileData = {
+      id: profileId,
+      email: email.trim(),
+      username: cleanUser,
+      team_name: cleanTeam,
+      country_code: cleanCountry,
+      role: cleanRole,
+      avatar_url: avatarUrl || 'pilot'
+    };
+
+    if (supabaseClient && userObj) {
+      try {
+        await supabaseClient.from('profiles').upsert(profileData);
+      } catch (e) {
+        console.warn("Profile upsert notice:", e);
+      }
+    }
+
+    this.currentProfile = profileData;
+    localStorage.setItem('fgc_active_profile', JSON.stringify(profileData));
+    this.currentUser = userObj || { id: profileId, email: email.trim() };
+    this.notifyListeners();
+    return { user: this.currentUser, profile: profileData };
   },
 
   async signIn(email, password) {
@@ -324,6 +402,19 @@ const AuthService = {
     if (data.user) {
       this.currentUser = data.user;
       await this.loadProfile(data.user.id);
+      if (!this.currentProfile) {
+        const fbProfile = {
+          id: data.user.id,
+          email: data.user.email || email.trim(),
+          username: (data.user.email || email).split('@')[0],
+          team_name: 'Team ' + ((data.user.email || email).split('@')[0]),
+          country_code: 'CO',
+          role: 'student',
+          avatar_url: 'pilot'
+        };
+        this.currentProfile = fbProfile;
+        localStorage.setItem('fgc_active_profile', JSON.stringify(fbProfile));
+      }
       this.notifyListeners();
     }
     return data;
@@ -1030,9 +1121,12 @@ const AuthGuard = {
     // Retrieve active user from cache/session
     const profile = AuthService.getUserProfile();
     if (!profile) {
-      sessionStorage.setItem('fgc_redirect_after_auth', window.location.href);
-      window.location.replace('index.html?auth=required');
-      return false;
+      const p = window.location.pathname.toLowerCase();
+      if (!p.endsWith('index.html') && p !== '/' && p !== '') {
+        sessionStorage.setItem('fgc_redirect_after_auth', window.location.href);
+        window.location.replace('index.html?auth=required');
+        return false;
+      }
     }
     return true;
   }
