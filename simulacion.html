@@ -62,343 +62,347 @@
           <div class="setup-field-hint">Vista previa del campo • Escoge tu posición</div>
         </div>
 
-        <!-- Right: Configuration Panel -->
+        <!-- Right: Configuration Panel — 2-column grid for better use of space -->
         <div class="setup-config">
 
-          <!-- Alliance & Position -->
-          <div class="config-card">
-            <div class="config-card-header">
-              <span class="config-icon">🏳️</span>
-              <h3>ALIANZA Y POSICIÓN</h3>
-            </div>
-            <div class="config-row">
-              <label>Alianza</label>
-              <div class="toggle-group" id="allianceToggle">
-                <button class="toggle-btn active" data-value="red">🔴 Red</button>
-                <button class="toggle-btn" data-value="blue">🔵 Blue</button>
+          <!-- ══ ROW 1: Alliance + Game Mode ══ -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+
+            <!-- Alliance & Position -->
+            <div class="config-card">
+              <div class="config-card-header">
+                <span class="config-icon">🏳️</span>
+                <h3 data-i18n="Alliance & Position">ALIANZA Y POSICIÓN</h3>
+              </div>
+              <div class="config-row">
+                <label data-i18n="Alliance">Alianza</label>
+                <div class="toggle-group" id="allianceToggle">
+                  <button class="toggle-btn active" data-value="red">🔴 Red</button>
+                  <button class="toggle-btn" data-value="blue">🔵 Blue</button>
+                </div>
+              </div>
+              <div class="config-row">
+                <label data-i18n="Team">Equipo</label>
+                <div class="toggle-group" id="teamToggle">
+                  <button class="toggle-btn active" data-value="1" data-i18n="Team 1">Eq. 1</button>
+                  <button class="toggle-btn" data-value="2" data-i18n="Team 2">Eq. 2</button>
+                  <button class="toggle-btn" data-value="3" data-i18n="Team 3">Eq. 3</button>
+                </div>
               </div>
             </div>
-            <div class="config-row">
-              <label>Equipo</label>
-              <div class="toggle-group" id="teamToggle">
-                <button class="toggle-btn active" data-value="1">Equipo 1</button>
-                <button class="toggle-btn" data-value="2">Equipo 2</button>
-                <button class="toggle-btn" data-value="3">Equipo 3</button>
+
+            <!-- Game Mode -->
+            <div class="config-card">
+              <div class="config-card-header">
+                <span class="config-icon">👥</span>
+                <h3 data-i18n="Game Mode">MODO DE JUEGO</h3>
+              </div>
+              <div class="config-row">
+                <label data-i18n="Players">Jugadores</label>
+                <div class="toggle-group" id="gameModeToggle">
+                  <button class="toggle-btn active" data-value="1" data-i18n="1 Player">1 Jugador 👤</button>
+                  <button class="toggle-btn" data-value="2" data-i18n="2 Players">2 Jugadores 👥</button>
+                </div>
+              </div>
+              <div class="config-row" id="coopModeRow" style="display: none; margin-top: 8px; border-top: 1px dashed rgba(255,255,255,0.06); padding-top: 8px;">
+                <label data-i18n="Relation">Relación</label>
+                <div class="toggle-group" id="coopRelationToggle">
+                  <button class="toggle-btn active" data-value="teammates" data-i18n="Teammates">Compañeros 🤝</button>
+                  <button class="toggle-btn" data-value="rivals" data-i18n="Rivals">Rivales ⚔️</button>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Robot Engineering Specs & Dimensions -->
+          <!-- ══ ROW 2: Dimensions ══ -->
           <div class="config-card">
             <div class="config-card-header">
               <span class="config-icon">📐</span>
-              <h3>DIMENSIONES & VOLUMEN DEL ROBOT</h3>
+              <h3 data-i18n="Robot Dimensions & Volume">DIMENSIONES &amp; VOLUMEN DEL ROBOT</h3>
             </div>
-            
-            <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 10px; margin-bottom: 12px;">
-              <div style="font-size: 0.75rem; font-weight: 700; color: #ffd700; margin-bottom: 6px;">📦 Dimensiones Iniciales (cm)</div>
-              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
-                <div>
-                  <label style="font-size: 0.68rem; color: #94a3b8;">Largo (L)</label>
-                  <input type="number" id="initDimL" class="form-input" style="padding: 4px 6px; font-size: 0.78rem;" value="45" min="20" max="90">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <!-- Initial -->
+              <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 8px;">
+                <div style="font-size: 0.7rem; font-weight: 700; color: #ffd700; margin-bottom: 6px;">📦 <span data-i18n="Initial Dimensions (cm)">Dimensiones Iniciales (cm)</span></div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px;">
+                  <div>
+                    <label style="font-size: 0.65rem; color: #94a3b8;" data-i18n="Length (L)">Largo (L)</label>
+                    <input type="number" id="initDimL" class="form-input" style="padding: 4px 6px; font-size: 0.75rem;" value="45" min="20" max="90">
+                  </div>
+                  <div>
+                    <label style="font-size: 0.65rem; color: #94a3b8;" data-i18n="Width (W)">Ancho (W)</label>
+                    <input type="number" id="initDimW" class="form-input" style="padding: 4px 6px; font-size: 0.75rem;" value="45" min="20" max="90">
+                  </div>
+                  <div>
+                    <label style="font-size: 0.65rem; color: #94a3b8;" data-i18n="Height (H)">Alto (H)</label>
+                    <input type="number" id="initDimH" class="form-input" style="padding: 4px 6px; font-size: 0.75rem;" value="40" min="20" max="90">
+                  </div>
                 </div>
-                <div>
-                  <label style="font-size: 0.68rem; color: #94a3b8;">Ancho (W)</label>
-                  <input type="number" id="initDimW" class="form-input" style="padding: 4px 6px; font-size: 0.78rem;" value="45" min="20" max="90">
-                </div>
-                <div>
-                  <label style="font-size: 0.68rem; color: #94a3b8;">Alto (H)</label>
-                  <input type="number" id="initDimH" class="form-input" style="padding: 4px 6px; font-size: 0.78rem;" value="40" min="20" max="90">
-                </div>
-              </div>
-              <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 4px; display: flex; justify-content: space-between;">
-                <span>Volumen Inicial:</span>
-                <strong id="initVolDisplay" style="color: #38bdf8;">81,000 cm³</strong>
-              </div>
-            </div>
-
-            <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 10px; margin-bottom: 12px;">
-              <div style="font-size: 0.75rem; font-weight: 700; color: #f59e0b; margin-bottom: 6px;">🚀 Dimensiones Finales Expandidas (cm)</div>
-              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
-                <div>
-                  <label style="font-size: 0.68rem; color: #94a3b8;">Largo (L)</label>
-                  <input type="number" id="finalDimL" class="form-input" style="padding: 4px 6px; font-size: 0.78rem;" value="65" min="20" max="120">
-                </div>
-                <div>
-                  <label style="font-size: 0.68rem; color: #94a3b8;">Ancho (W)</label>
-                  <input type="number" id="finalDimW" class="form-input" style="padding: 4px 6px; font-size: 0.78rem;" value="50" min="20" max="120">
-                </div>
-                <div>
-                  <label style="font-size: 0.68rem; color: #94a3b8;">Alto (H)</label>
-                  <input type="number" id="finalDimH" class="form-input" style="padding: 4px 6px; font-size: 0.78rem;" value="70" min="20" max="140">
+                <div style="font-size: 0.68rem; color: #94a3b8; margin-top: 4px; display: flex; justify-content: space-between;">
+                  <span data-i18n="Initial Volume:">Volumen Inicial:</span>
+                  <strong id="initVolDisplay" style="color: #38bdf8;">81,000 cm³</strong>
                 </div>
               </div>
-              <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 4px; display: flex; justify-content: space-between;">
-                <span>Volumen Expandido:</span>
-                <strong id="finalVolDisplay" style="color: #f59e0b;">227,500 cm³</strong>
+              <!-- Expanded -->
+              <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 8px;">
+                <div style="font-size: 0.7rem; font-weight: 700; color: #f59e0b; margin-bottom: 6px;">🚀 <span data-i18n="Expanded Dimensions (cm)">Expandidas (cm)</span></div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px;">
+                  <div>
+                    <label style="font-size: 0.65rem; color: #94a3b8;" data-i18n="Length (L)">Largo (L)</label>
+                    <input type="number" id="finalDimL" class="form-input" style="padding: 4px 6px; font-size: 0.75rem;" value="65" min="20" max="120">
+                  </div>
+                  <div>
+                    <label style="font-size: 0.65rem; color: #94a3b8;" data-i18n="Width (W)">Ancho (W)</label>
+                    <input type="number" id="finalDimW" class="form-input" style="padding: 4px 6px; font-size: 0.75rem;" value="50" min="20" max="120">
+                  </div>
+                  <div>
+                    <label style="font-size: 0.65rem; color: #94a3b8;" data-i18n="Height (H)">Alto (H)</label>
+                    <input type="number" id="finalDimH" class="form-input" style="padding: 4px 6px; font-size: 0.75rem;" value="70" min="20" max="140">
+                  </div>
+                </div>
+                <div style="font-size: 0.68rem; color: #94a3b8; margin-top: 4px; display: flex; justify-content: space-between;">
+                  <span data-i18n="Expanded Volume:">Vol. Expandido:</span>
+                  <strong id="finalVolDisplay" style="color: #f59e0b;">227,500 cm³</strong>
+                </div>
               </div>
             </div>
 
-            <!-- Direction of expansion -->
-            <div class="config-row" style="flex-direction: column; align-items: flex-start; gap: 6px;">
-              <label style="font-size: 0.75rem;">Hacia qué dirección se expande:</label>
-              <div style="display: flex; gap: 4px; flex-wrap: wrap;" id="expansionDirGroup">
-                <button type="button" class="toggle-btn active" data-dir="left">⬅️ Izq</button>
-                <button type="button" class="toggle-btn active" data-dir="right">➡️ Der</button>
-                <button type="button" class="toggle-btn active" data-dir="up">⬆️ Arriba</button>
-                <button type="button" class="toggle-btn" data-dir="front">🔼 Adelante</button>
-                <button type="button" class="toggle-btn" data-dir="back">🔽 Atrás</button>
+            <!-- Expansion direction + time -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; align-items: center;">
+              <div>
+                <label style="font-size: 0.7rem; color: #94a3b8; display: block; margin-bottom: 4px;" data-i18n="Expansion direction:">Dirección de expansión:</label>
+                <div style="display: flex; gap: 4px; flex-wrap: wrap;" id="expansionDirGroup">
+                  <button type="button" class="toggle-btn active" data-dir="left">⬅</button>
+                  <button type="button" class="toggle-btn active" data-dir="right">➡</button>
+                  <button type="button" class="toggle-btn active" data-dir="up">⬆</button>
+                  <button type="button" class="toggle-btn" data-dir="front">🔼</button>
+                  <button type="button" class="toggle-btn" data-dir="back">🔽</button>
+                </div>
               </div>
-            </div>
-
-            <div class="spec-row" style="margin-top: 8px;">
-              <div class="spec-info">
-                <label>Tiempo de Expansión</label>
-                <span class="spec-unit" id="expansionTimeVal">2.5 s</span>
-              </div>
-              <input type="range" class="spec-slider" id="expansionTime" min="0.5" max="8.0" step="0.5" value="2.5">
-            </div>
-          </div>
-
-          <!-- Storage / Hopper Specs -->
-          <div class="config-card">
-            <div class="config-card-header">
-              <span class="config-icon">📦</span>
-              <h3>TOLVA & ALMACENAMIENTO</h3>
-            </div>
-            
-            <div class="spec-row">
-              <div class="spec-info">
-                <label>Capacidad Sin Expansión</label>
-                <span class="spec-unit" id="capNonExpVal">6 pelotas</span>
-              </div>
-              <input type="range" class="spec-slider" id="capNonExp" min="1" max="25" step="1" value="6">
-            </div>
-
-            <div class="spec-row">
-              <div class="spec-info">
-                <label>Capacidad Con Expansión (Linear Motion)</label>
-                <span class="spec-unit" id="capacityVal">14 pelotas</span>
-              </div>
-              <input type="range" class="spec-slider" id="capacity" min="3" max="50" step="1" value="14">
-            </div>
-
-            <div class="spec-row">
-              <div class="spec-info">
-                <label>Tiempo Estimado para Llenar Almacenamiento</label>
-                <span class="spec-unit" id="storageFillTimeVal">12.5 s</span>
-              </div>
-              <input type="range" class="spec-slider" id="storageFillTime" min="3.0" max="45.0" step="0.5" value="12.5">
-            </div>
-          </div>
-
-          <!-- Kinematics & Speeds -->
-          <div class="config-card">
-            <div class="config-card-header">
-              <span class="config-icon">⚡</span>
-              <h3>CINEMÁTICA & VELOCIDADES</h3>
-            </div>
-            <div class="spec-row">
-              <div class="spec-info">
-                <label>Velocidad de Movimiento</label>
-                <span class="spec-unit" id="moveSpeedVal">2.8 m/s</span>
-              </div>
-              <input type="range" class="spec-slider" id="moveSpeed" min="0.5" max="4.5" step="0.1" value="2.8">
-            </div>
-            <div class="spec-row">
-              <div class="spec-info">
-                <label>Velocidad de Recogida (Intake)</label>
-                <span class="spec-unit" id="pickupSpeedVal">2.5 pelotas/s</span>
-              </div>
-              <input type="range" class="spec-slider" id="pickupSpeed" min="0.5" max="6.0" step="0.5" value="2.5">
-            </div>
-            <div class="spec-row">
-              <div class="spec-info">
-                <label>Velocidad de Disparo (Shooter)</label>
-                <span class="spec-unit" id="shotSpeedVal">3.2 pelotas/s</span>
-              </div>
-              <input type="range" class="spec-slider" id="shotSpeed" min="1.0" max="8.0" step="0.2" value="3.2">
-            </div>
-            <div class="spec-row">
-              <div class="spec-info">
-                <label>Precisión Mecánica del Robot</label>
-                <span class="spec-unit" id="accuracyVal">92%</span>
-              </div>
-              <input type="range" class="spec-slider" id="accuracy" min="50" max="100" step="2" value="92">
-            </div>
-
-            <!-- Strategy Shooting Target -->
-            <div class="config-row" style="margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.06); padding-top: 8px;">
-              <label>Objetivo Principal</label>
-              <div class="toggle-group" id="strategyTargetToggle">
-                <button type="button" class="toggle-btn active" data-value="shooter">🎯 Shooter (Supresión)</button>
-                <button type="button" class="toggle-btn" data-value="feeder_human_player">🔥 Feeder (Fire Shield)</button>
+              <div class="spec-row">
+                <div class="spec-info">
+                  <label data-i18n="Expansion Time">Tiempo Expansión</label>
+                  <span class="spec-unit" id="expansionTimeVal">2.5 s</span>
+                </div>
+                <input type="range" class="spec-slider" id="expansionTime" min="0.5" max="8.0" step="0.5" value="2.5">
               </div>
             </div>
           </div>
 
-          <!-- Climber & Brace Specs -->
-          <div class="config-card">
-            <div class="config-card-header">
-              <span class="config-icon">🧗</span>
-              <h3>SISTEMA DE ESCALADA & BRACE</h3>
-            </div>
-            
-            <div class="config-row" style="flex-direction: column; align-items: flex-start; gap: 6px;">
-              <label>Tipo de Mecanismo de Escalada:</label>
-              <div class="toggle-group" id="climberTypeToggle" style="width: 100%;">
-                <button type="button" class="toggle-btn active" data-value="solo" style="flex: 1; font-size: 0.72rem;">🧗 Solo Climber</button>
-                <button type="button" class="toggle-btn" data-value="buddy_carrier" style="flex: 1; font-size: 0.72rem;">🤝 Buddy Carrier</button>
-                <button type="button" class="toggle-btn" data-value="buddy_piggyback" style="flex: 1; font-size: 0.72rem;">🪝 Buddy Enganche</button>
+          <!-- ══ ROW 3: Hopper + Kinematics side by side ══ -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+
+            <!-- Hopper & Storage -->
+            <div class="config-card">
+              <div class="config-card-header">
+                <span class="config-icon">📦</span>
+                <h3 data-i18n="Hopper & Storage">TOLVA &amp; ALMACÉN</h3>
+              </div>
+              <div class="spec-row">
+                <div class="spec-info">
+                  <label data-i18n="Without expansion">Sin Expansión</label>
+                  <span class="spec-unit" id="capNonExpVal">6 🟠</span>
+                </div>
+                <input type="range" class="spec-slider" id="capNonExp" min="1" max="25" step="1" value="6">
+              </div>
+              <div class="spec-row">
+                <div class="spec-info">
+                  <label data-i18n="With Linear Motion">Con Linear Motion</label>
+                  <span class="spec-unit" id="capacityVal">14 🟠</span>
+                </div>
+                <input type="range" class="spec-slider" id="capacity" min="3" max="50" step="1" value="14">
+              </div>
+              <div class="spec-row">
+                <div class="spec-info">
+                  <label data-i18n="Fill Time">Tiempo Llenado</label>
+                  <span class="spec-unit" id="storageFillTimeVal">12.5 s</span>
+                </div>
+                <input type="range" class="spec-slider" id="storageFillTime" min="3.0" max="45.0" step="0.5" value="12.5">
               </div>
             </div>
 
-            <div class="spec-row" style="margin-top: 8px;">
-              <div class="spec-info">
-                <label>Velocidad de Escalada</label>
-                <span class="spec-unit" id="climbSpeedVal">0.8 m/s</span>
+            <!-- Kinematics & Speeds -->
+            <div class="config-card">
+              <div class="config-card-header">
+                <span class="config-icon">⚡</span>
+                <h3 data-i18n="Kinematics & Speed">CINEMÁTICA</h3>
               </div>
-              <input type="range" class="spec-slider" id="climbSpeed" min="0.1" max="2.0" step="0.1" value="0.8">
-            </div>
-            
-            <div class="spec-row">
-              <div class="spec-info">
-                <label>Tiempo de Anclaje en Escalado</label>
-                <span class="spec-unit" id="climbAnchorTimeVal">2.5 s</span>
+              <div class="spec-row">
+                <div class="spec-info">
+                  <label data-i18n="Move Speed">Movimiento</label>
+                  <span class="spec-unit" id="moveSpeedVal">2.8 m/s</span>
+                </div>
+                <input type="range" class="spec-slider" id="moveSpeed" min="0.5" max="4.5" step="0.1" value="2.8">
               </div>
-              <input type="range" class="spec-slider" id="climbAnchorTime" min="0.5" max="8.0" step="0.5" value="2.5">
-            </div>
-
-            <div class="config-row">
-              <label>Zona Máxima Objetivo</label>
-              <div class="toggle-group" id="targetBraceZoneToggle">
-                <button type="button" class="toggle-btn" data-value="zone1">Zona 1 (Baja)</button>
-                <button type="button" class="toggle-btn" data-value="zone2">Zona 2 (Media)</button>
-                <button type="button" class="toggle-btn active" data-value="zone3">Zona 3 (Alta)</button>
+              <div class="spec-row">
+                <div class="spec-info">
+                  <label data-i18n="Intake">Intake</label>
+                  <span class="spec-unit" id="pickupSpeedVal">2.5 /s</span>
+                </div>
+                <input type="range" class="spec-slider" id="pickupSpeed" min="0.5" max="6.0" step="0.5" value="2.5">
               </div>
-            </div>
-
-            <div class="spec-row">
-              <div class="spec-info">
-                <label>Tiempo Restante para Ir al Brace</label>
-                <span class="spec-unit" id="climbStartTimeVal">25 s restantes</span>
+              <div class="spec-row">
+                <div class="spec-info">
+                  <label data-i18n="Shooter">Shooter</label>
+                  <span class="spec-unit" id="shotSpeedVal">3.2 /s</span>
+                </div>
+                <input type="range" class="spec-slider" id="shotSpeed" min="1.0" max="8.0" step="0.2" value="3.2">
               </div>
-              <input type="range" class="spec-slider" id="climbStartTime" min="5" max="60" step="5" value="25">
-            </div>
-
-            <!-- Cloud Presets Toolbar -->
-            <div style="display: flex; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.08);">
-              <select id="cloudPresetSelect" style="flex: 1; background: #131728; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; font-size: 0.75rem; padding: 6px 8px;">
-                <option value="">📋 Cargar Preset en Nube...</option>
-              </select>
-              <button id="savePresetBtn" type="button" style="background: rgba(255,215,0,0.15); border: 1px solid rgba(255,215,0,0.4); color: #ffd700; font-size: 0.75rem; padding: 6px 10px; border-radius: 6px; cursor: pointer;">
-                💾 Guardar Specs
-              </button>
-            </div>
-          </div>
-
-          <!-- Modo de Juego -->
-          <div class="config-card">
-            <div class="config-card-header">
-              <span class="config-icon">👥</span>
-              <h3>MODO DE JUEGO</h3>
-            </div>
-            <div class="config-row">
-              <label>Jugadores</label>
-              <div class="toggle-group" id="gameModeToggle">
-                <button class="toggle-btn active" data-value="1">1 Jugador 👤</button>
-                <button class="toggle-btn" data-value="2">2 Jugadores 👥</button>
+              <div class="spec-row">
+                <div class="spec-info">
+                  <label data-i18n="Accuracy">Precisión</label>
+                  <span class="spec-unit" id="accuracyVal">92%</span>
+                </div>
+                <input type="range" class="spec-slider" id="accuracy" min="50" max="100" step="2" value="92">
               </div>
-            </div>
-            <div class="config-row" id="coopModeRow" style="display: none; margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.06); padding-top: 10px;">
-              <label>Relación de Alianza</label>
-              <div class="toggle-group" id="coopRelationToggle">
-                <button class="toggle-btn active" data-value="teammates">Compañeros 🤝</button>
-                <button class="toggle-btn" data-value="rivals">Rivales ⚔️</button>
+              <!-- Strategy Shooting Target -->
+              <div class="config-row" style="margin-top: 6px; border-top: 1px dashed rgba(255,255,255,0.06); padding-top: 6px;">
+                <label data-i18n="Main Target">Objetivo</label>
+                <div class="toggle-group" id="strategyTargetToggle">
+                  <button type="button" class="toggle-btn active" data-value="shooter" data-i18n="Suppression">🎯 Supresión</button>
+                  <button type="button" class="toggle-btn" data-value="feeder_human_player">🔥 Fire Shield</button>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Bot Difficulty -->
-          <div class="config-card">
-            <div class="config-card-header">
-              <span class="config-icon">🎮</span>
-              <h3>DIFICULTAD DE BOTS</h3>
-            </div>
-            <div class="config-row">
-              <label>Aliados</label>
-              <div class="toggle-group" id="allyDifficulty">
-                <button class="toggle-btn" data-value="0.0">Nula</button>
-                <button class="toggle-btn" data-value="0.6">Básica</button>
-                <button class="toggle-btn active" data-value="0.8">Media</button>
-                <button class="toggle-btn" data-value="1.0">Fuerte</button>
+          <!-- ══ ROW 4: Climber + Human Player + Bots ══ -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+
+            <!-- Climber & Brace -->
+            <div class="config-card">
+              <div class="config-card-header">
+                <span class="config-icon">🧗</span>
+                <h3 data-i18n="Climb & Brace">ESCALADA &amp; BRACE</h3>
               </div>
-            </div>
-            <div class="spec-row" style="margin-top: -2px; margin-bottom: 6px;">
-              <div class="spec-info">
-                <label>Ajuste Aliados</label>
-                <span class="spec-unit" id="allyDiffVal">0.80</span>
+              <div class="toggle-group" id="climberTypeToggle" style="width: 100%; margin-bottom: 6px;">
+                <button type="button" class="toggle-btn active" data-value="solo" style="flex: 1; font-size: 0.65rem;" data-i18n="Solo">🧗 Solo</button>
+                <button type="button" class="toggle-btn" data-value="buddy_carrier" style="flex: 1; font-size: 0.65rem;" data-i18n="Carrier">🤝 Carrier</button>
+                <button type="button" class="toggle-btn" data-value="buddy_piggyback" style="flex: 1; font-size: 0.65rem;" data-i18n="Piggyback">🪝 Piggyback</button>
               </div>
-              <input type="range" class="spec-slider" id="allyDiffSlider" min="0.0" max="1.0" step="0.05" value="0.80">
+              <div class="spec-row">
+                <div class="spec-info">
+                  <label data-i18n="Climb Speed">Vel. Escalada</label>
+                  <span class="spec-unit" id="climbSpeedVal">0.8 m/s</span>
+                </div>
+                <input type="range" class="spec-slider" id="climbSpeed" min="0.1" max="2.0" step="0.1" value="0.8">
+              </div>
+              <div class="spec-row">
+                <div class="spec-info">
+                  <label data-i18n="Anchor Time">Anclaje</label>
+                  <span class="spec-unit" id="climbAnchorTimeVal">2.5 s</span>
+                </div>
+                <input type="range" class="spec-slider" id="climbAnchorTime" min="0.5" max="8.0" step="0.5" value="2.5">
+              </div>
+              <div class="config-row" style="margin-top: 4px;">
+                <label style="font-size: 0.68rem;" data-i18n="Max Zone">Zona Objetivo</label>
+                <div class="toggle-group" id="targetBraceZoneToggle">
+                  <button type="button" class="toggle-btn" data-value="zone1">Z1</button>
+                  <button type="button" class="toggle-btn" data-value="zone2">Z2</button>
+                  <button type="button" class="toggle-btn active" data-value="zone3">Z3</button>
+                </div>
+              </div>
+              <div class="spec-row">
+                <div class="spec-info">
+                  <label data-i18n="Time to Brace">Inicio Brace</label>
+                  <span class="spec-unit" id="climbStartTimeVal">25 s</span>
+                </div>
+                <input type="range" class="spec-slider" id="climbStartTime" min="5" max="60" step="5" value="25">
+              </div>
             </div>
 
-            <div class="config-row" style="margin-top: 4px;">
-              <label>Rivales</label>
-              <div class="toggle-group" id="rivalDifficulty">
-                <button class="toggle-btn" data-value="0.0">Nula</button>
-                <button class="toggle-btn" data-value="0.6">Básica</button>
-                <button class="toggle-btn active" data-value="0.8">Media</button>
-                <button class="toggle-btn" data-value="1.0">Fuerte</button>
+            <!-- Bots Difficulty + Human Player stacked -->
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <!-- Bot Difficulty -->
+              <div class="config-card" style="flex: 1;">
+                <div class="config-card-header">
+                  <span class="config-icon">🤖</span>
+                  <h3 data-i18n="Bot Difficulty">DIFICULTAD BOTS</h3>
+                </div>
+                <div class="config-row">
+                  <label data-i18n="Allies">Aliados</label>
+                  <div class="toggle-group" id="allyDifficulty">
+                    <button class="toggle-btn" data-value="0.0" data-i18n="None">Nula</button>
+                    <button class="toggle-btn" data-value="0.6" data-i18n="Basic">Básica</button>
+                    <button class="toggle-btn active" data-value="0.8" data-i18n="Medium">Media</button>
+                    <button class="toggle-btn" data-value="1.0" data-i18n="Strong">Fuerte</button>
+                  </div>
+                </div>
+                <div class="spec-row" style="margin-top: -2px; margin-bottom: 4px;">
+                  <div class="spec-info">
+                    <label data-i18n="Ally Adj.">Ajuste Al.</label>
+                    <span class="spec-unit" id="allyDiffVal">0.80</span>
+                  </div>
+                  <input type="range" class="spec-slider" id="allyDiffSlider" min="0.0" max="1.0" step="0.05" value="0.80">
+                </div>
+                <div class="config-row" style="margin-top: 4px;">
+                  <label data-i18n="Rivals">Rivales</label>
+                  <div class="toggle-group" id="rivalDifficulty">
+                    <button class="toggle-btn" data-value="0.0" data-i18n="None">Nula</button>
+                    <button class="toggle-btn" data-value="0.6" data-i18n="Basic">Básica</button>
+                    <button class="toggle-btn active" data-value="0.8" data-i18n="Medium">Media</button>
+                    <button class="toggle-btn" data-value="1.0" data-i18n="Strong">Fuerte</button>
+                  </div>
+                </div>
+                <div class="spec-row" style="margin-top: -2px; margin-bottom: 0;">
+                  <div class="spec-info">
+                    <label data-i18n="Rival Adj.">Ajuste Ri.</label>
+                    <span class="spec-unit" id="rivalDiffVal">0.80</span>
+                  </div>
+                  <input type="range" class="spec-slider" id="rivalDiffSlider" min="0.0" max="1.0" step="0.05" value="0.80">
+                </div>
               </div>
-            </div>
-            <div class="spec-row" style="margin-top: -2px; margin-bottom: 4px;">
-              <div class="spec-info">
-                <label>Ajuste Rivales</label>
-                <span class="spec-unit" id="rivalDiffVal">0.80</span>
+
+              <!-- Human Player -->
+              <div class="config-card">
+                <div class="config-card-header">
+                  <span class="config-icon">🧑</span>
+                  <h3 data-i18n="Human Player">HUMAN PLAYER</h3>
+                </div>
+                <div class="spec-row">
+                  <div class="spec-info">
+                    <label data-i18n="HP Accuracy">Precisión HP</label>
+                    <span class="spec-unit" id="hpAccuracyVal">70%</span>
+                  </div>
+                  <input type="range" class="spec-slider hp-slider" id="hpAccuracy" min="10" max="100" step="5" value="70">
+                </div>
               </div>
-              <input type="range" class="spec-slider" id="rivalDiffSlider" min="0.0" max="1.0" step="0.05" value="0.80">
+
+              <!-- Gamepad -->
+              <div class="config-card gamepad-card">
+                <div class="config-card-header">
+                  <span class="config-icon">🎮</span>
+                  <h3 data-i18n="Controller">MANDO</h3>
+                </div>
+                <div class="gamepad-status-row">
+                  <div class="gamepad-status-info">
+                    <span class="gamepad-status-badge disconnected" id="gamepadStatusBadge">
+                      <span class="status-dot"></span>
+                      <span id="gamepadStatusText" data-i18n="No Controller Connected">Sin Mando</span>
+                    </span>
+                  </div>
+                  <button type="button" class="gamepad-map-btn" id="openGamepadModalBtn">
+                    ⚙️ <span data-i18n="Map Buttons">Mapear</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- Human Player -->
-          <div class="config-card">
-            <div class="config-card-header">
-              <span class="config-icon">🧑</span>
-              <h3>HUMAN PLAYER</h3>
-            </div>
-            <div class="spec-row">
-              <div class="spec-info">
-                <label>Precisión del Humano</label>
-                <span class="spec-unit" id="hpAccuracyVal">70%</span>
-              </div>
-              <input type="range" class="spec-slider hp-slider" id="hpAccuracy" min="10" max="100" step="5" value="70">
-            </div>
-          </div>
-
-          <!-- Gamepad Config Card -->
-          <div class="config-card gamepad-card">
-            <div class="config-card-header">
-              <span class="config-icon">🎮</span>
-              <h3>CONTROL POR MANDO</h3>
-            </div>
-            <div class="gamepad-status-row">
-              <div class="gamepad-status-info">
-                <span class="gamepad-status-badge disconnected" id="gamepadStatusBadge">
-                  <span class="status-dot"></span>
-                  <span id="gamepadStatusText">Sin Mando Conectado</span>
-                </span>
-                <span class="gamepad-subtext" id="gamepadSubtext">Conecta tu mando PlayStation por USB y presiona cualquier botón</span>
-              </div>
-              <button type="button" class="gamepad-map-btn" id="openGamepadModalBtn">
-                ⚙️ Mapear Botones
-              </button>
-            </div>
+          <!-- ══ Cloud Presets + Start Button ══ -->
+          <div style="display: flex; gap: 8px; align-items: center; padding: 8px 0 4px 0; border-top: 1px dashed rgba(255,255,255,0.08);">
+            <select id="cloudPresetSelect" style="flex: 1; background: #131728; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; font-size: 0.75rem; padding: 6px 8px;">
+              <option value="" data-i18n="Load Cloud Preset...">📋 Cargar Preset en Nube...</option>
+            </select>
+            <button id="savePresetBtn" type="button" style="background: rgba(255,215,0,0.15); border: 1px solid rgba(255,215,0,0.4); color: #ffd700; font-size: 0.75rem; padding: 6px 10px; border-radius: 6px; cursor: pointer; white-space: nowrap;">
+              💾 <span data-i18n="Save Specs">Guardar</span>
+            </button>
           </div>
 
           <!-- Start Button -->
           <button class="start-match-btn" id="startMatchBtn">
             <span class="start-icon">▶</span>
-            <span>INICIAR PARTIDO</span>
+            <span data-i18n="START MATCH">INICIAR PARTIDO</span>
           </button>
 
         </div>
@@ -707,56 +711,7 @@
       </div>
     </div>
 
-    <!-- ═══ Unified Global Footer ═══ -->
-    <footer class="app-footer-global">
-      <div class="footer-top-grid">
-        <div class="footer-brand-col">
-          <div class="logo-area" style="padding-left: 14px; margin-bottom: 12px;">
-            <span class="flag-stripe yellow"></span>
-            <span class="flag-stripe blue"></span>
-            <span class="flag-stripe red"></span>
-            <span style="font-family: var(--font-display); font-weight: 800; font-size: 1.1rem; color: #ffd700; letter-spacing: 1px;">
-              TEAM COLOMBIA • FGC 2026
-            </span>
-          </div>
-          <p style="font-size: 0.82rem; color: #94a3b8; line-height: 1.6; max-width: 340px; margin: 0 0 14px 0;">
-            Official strategy and engineering simulation platform for FIRST Global Challenge 2026 <em>Igniting Innovation</em> in Incheon, South Korea.
-          </p>
-          <div style="display: flex; gap: 8px;">
-            <span class="badge" style="background: rgba(255,215,0,0.12); color: #ffd700; font-size: 0.72rem;">FIRST Global Incheon</span>
-            <span class="badge" style="background: rgba(56,189,248,0.12); color: #38bdf8; font-size: 0.72rem;">STEM Robotics</span>
-          </div>
-        </div>
-
-        <div class="footer-links-col">
-          <h4 style="font-size: 0.85rem; color: #fff; font-weight: 700; margin-bottom: 12px; font-family: var(--font-display);">Platform Navigation</h4>
-          <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; font-size: 0.82rem;">
-            <li><a href="index.html" style="color: #94a3b8; text-decoration: none; transition: color 0.2s;">Portal Home</a></li>
-            <li><a href="simulacion.html" style="color: #94a3b8; text-decoration: none; transition: color 0.2s;">2D Match Simulator</a></li>
-            <li><a href="estrategias.html" style="color: #94a3b8; text-decoration: none; transition: color 0.2s;">Tactical Playbook</a></li>
-            <li><a href="calculadora.html" style="color: #94a3b8; text-decoration: none; transition: color 0.2s;">Scoring Calculator</a></li>
-          </ul>
-        </div>
-
-        <div class="footer-links-col">
-          <h4 style="font-size: 0.85rem; color: #fff; font-weight: 700; margin-bottom: 12px; font-family: var(--font-display);">Official Resources</h4>
-          <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; font-size: 0.82rem;">
-            <li><a href="https://docs.google.com/document/d/1fYKh2XSMgDdOu3pxXMvx29dB3nTfZcnNdmGRpooyznU/view?tab=t.0" target="_blank" rel="noopener noreferrer" style="color: #38bdf8; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;"><span>Game Manual 2026</span> ↗</a></li>
-            <li><a href="https://first.global" target="_blank" rel="noopener noreferrer" style="color: #94a3b8; text-decoration: none;">FIRST Global Official</a></li>
-            <li><a href="scouting.html" style="color: #94a3b8; text-decoration: none;">Team Colombia Hub</a></li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="footer-bottom-bar">
-        <span style="font-size: 0.78rem; color: #64748b;">
-          &copy; 2026 Fundación Team Colombia — Empowering the next generation of engineers through FIRST Global Challenge.
-        </span>
-        <div style="display: flex; gap: 12px; align-items: center;">
-          <span style="font-size: 0.75rem; color: #94a3b8;">Cyber-Physical Engineering v2.6</span>
-        </div>
-      </div>
-    </footer>
+    <!-- No footer in fullscreen game app -->
   </div>
 
   <script src="supabase-client.js"></script>

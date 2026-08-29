@@ -674,8 +674,8 @@
       <!-- Login Form -->
       <form id="loginForm">
         <div class="form-group">
-          <label>Email Address</label>
-          <input type="email" id="loginEmail" class="form-input" placeholder="team@example.com" required>
+          <label>Email Address <span style="color: #94a3b8; font-size: 0.7rem;">(used when you registered)</span></label>
+          <input type="email" id="loginEmail" class="form-input" placeholder="captain@team.org" required>
         </div>
         <div class="form-group">
           <label>Password</label>
@@ -688,9 +688,24 @@
 
       <!-- Register Form -->
       <form id="registerForm" style="display: none;">
+        <!-- Email + Password at the TOP so users immediately see their login credentials -->
+        <div style="background: rgba(255,215,0,0.05); border: 1px solid rgba(255,215,0,0.2); border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+          <div style="font-size: 0.68rem; font-weight: 700; color: #ffd700; margin-bottom: 8px; letter-spacing: 0.5px;">🔑 CREDENCIALES DE ACCESO (con estas ingresas después)</div>
+          <div style="display: flex; gap: 10px;">
+            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+              <label>Email <span style="color: #ef4444;">*</span></label>
+              <input type="email" id="regEmail" class="form-input" placeholder="captain@team.org" required>
+            </div>
+            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+              <label>Password <span style="color: #ef4444;">*</span></label>
+              <input type="password" id="regPassword" class="form-input" placeholder="Min 6 characters" required minlength="6">
+            </div>
+          </div>
+        </div>
+
         <div style="display: flex; gap: 10px;">
           <div class="form-group" style="flex: 1;">
-            <label>Username <span style="color: #ef4444;">*</span></label>
+            <label>Username (display) <span style="color: #ef4444;">*</span></label>
             <input type="text" id="regUsername" class="form-input" placeholder="e.g. cyber_pilot" required maxlength="30">
           </div>
           <div class="form-group" style="flex: 1;">
@@ -713,7 +728,7 @@
               <!-- Populated from FGC_COUNTRIES -->
             </select>
             <small style="display: block; font-size: 0.7rem; color: #94a3b8; margin-top: 4px; line-height: 1.2;">
-              ¿Falta tu país? Escríbenos a <a href="https://instagram.com/firstglobalcolombia" target="_blank" style="color: #ffd700;">@firstglobalcolombia</a>
+              ¿Falta tu país? <a href="https://instagram.com/firstglobalcolombia" target="_blank" style="color: #ffd700;">@firstglobalcolombia</a>
             </small>
           </div>
         </div>
@@ -727,15 +742,7 @@
           <input type="hidden" id="regAvatarUrl" value="pilot" required>
         </div>
 
-        <div class="form-group">
-          <label>Email Address <span style="color: #ef4444;">*</span></label>
-          <input type="email" id="regEmail" class="form-input" placeholder="captain@team.org" required>
-        </div>
-        <div class="form-group">
-          <label>Password <span style="color: #ef4444;">*</span></label>
-          <input type="password" id="regPassword" class="form-input" placeholder="Minimum 6 characters" required minlength="6">
-        </div>
-        <button type="submit" id="submitRegisterBtn" class="primary-btn" style="width: 100%; justify-content: center; padding: 12px; margin-top: 10px; background: #ffd700; color: #0a0c14;">
+        <button type="submit" id="submitRegisterBtn" class="primary-btn" style="width: 100%; justify-content: center; padding: 12px; margin-top: 6px; background: #ffd700; color: #0a0c14;">
           Complete Profile & Enter
         </button>
       </form>

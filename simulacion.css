@@ -58,8 +58,8 @@ body:has(.sim-app) {
 
 .setup-workspace {
   display: grid;
-  grid-template-columns: 1fr 420px;
-  gap: 16px;
+  grid-template-columns: 1fr 560px;
+  gap: 12px;
   align-items: stretch;
   flex: 1;
   min-height: 0;
