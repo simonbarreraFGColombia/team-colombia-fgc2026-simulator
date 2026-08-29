@@ -540,10 +540,11 @@
         <table class="lb-table" style="width: 100%;">
           <thead>
             <tr>
-              <th style="width: 60px;">Rank</th>
-              <th>Team / Institution</th>
+              <th style="width: 50px;">Rank</th>
+              <th>Competitor</th>
+              <th>Team Name</th>
               <th>Country</th>
-              <th>Number</th>
+              <th>Role</th>
               <th>Matches</th>
               <th>Record Score</th>
             </tr>
@@ -610,15 +611,15 @@
 
   <!-- Authentication Modal (Fixed Overlay) -->
   <div class="auth-modal" id="authModal">
-    <div class="auth-modal-content">
+    <div class="auth-modal-content" style="max-width: 480px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <h3 style="margin: 0; font-family: var(--font-display); color: #ffd700; font-size: 1.15rem; font-weight: 700;">FGC Access Portal</h3>
+        <h3 style="margin: 0; font-family: var(--font-display); color: #ffd700; font-size: 1.15rem; font-weight: 700;">FGC Access & Profile Setup</h3>
         <button id="closeAuthModalBtn" style="background: transparent; border: none; color: #94a3b8; font-size: 20px; cursor: pointer;">✕</button>
       </div>
 
       <div class="auth-tabs">
         <button class="auth-tab-btn active" id="tabLoginBtn">Sign In</button>
-        <button class="auth-tab-btn" id="tabRegisterBtn">Register Team</button>
+        <button class="auth-tab-btn" id="tabRegisterBtn">Create Profile & Team</button>
       </div>
 
       <!-- Login Form -->
@@ -638,43 +639,52 @@
 
       <!-- Register Form -->
       <form id="registerForm" style="display: none;">
-        <div class="form-group">
-          <label>Team Name / Institution</label>
-          <input type="text" id="regTeamName" class="form-input" placeholder="e.g. Team Mexico / Aztech" required maxlength="50">
-        </div>
         <div style="display: flex; gap: 10px;">
           <div class="form-group" style="flex: 1;">
-            <label>Country (ISO)</label>
-            <select id="regCountry" class="form-input" style="background: #131728;">
-              <option value="CO">Colombia 🇨🇴</option>
-              <option value="US">United States 🇺🇸</option>
-              <option value="MX">Mexico 🇲🇽</option>
-              <option value="DE">Germany 🇩🇪</option>
-              <option value="KZ">Kazakhstan 🇰🇿</option>
-              <option value="BR">Brazil 🇧🇷</option>
-              <option value="AR">Argentina 🇦🇷</option>
-              <option value="CA">Canada 🇨🇦</option>
-              <option value="JP">Japan 🇯🇵</option>
-              <option value="KR">South Korea 🇰🇷</option>
-              <option value="FR">France 🇫🇷</option>
-              <option value="OTHER">Other Country 🌐</option>
-            </select>
+            <label>Username <span style="color: #ef4444;">*</span></label>
+            <input type="text" id="regUsername" class="form-input" placeholder="e.g. cyber_pilot" required maxlength="30">
           </div>
           <div class="form-group" style="flex: 1;">
-            <label>Team Number</label>
-            <input type="text" id="regTeamNumber" class="form-input" placeholder="#108" maxlength="15">
+            <label>Role <span style="color: #ef4444;">*</span></label>
+            <select id="regRole" class="form-input" style="background: #131728;" required>
+              <option value="student">🎓 Student (Estudiante)</option>
+              <option value="mentor">🛡️ Mentor / Coach</option>
+            </select>
           </div>
         </div>
+
+        <div style="display: flex; gap: 10px;">
+          <div class="form-group" style="flex: 1.3;">
+            <label>Team Name <span style="color: #ef4444;">*</span></label>
+            <input type="text" id="regTeamName" class="form-input" placeholder="e.g. Team Mexico" required maxlength="50">
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label>Country <span style="color: #ef4444;">*</span></label>
+            <select id="regCountry" class="form-input" style="background: #131728;" required>
+              <!-- Populated from FGC_COUNTRIES -->
+            </select>
+          </div>
+        </div>
+
+        <!-- Avatar Preset Selection -->
         <div class="form-group">
-          <label>Email Address</label>
+          <label>Profile Picture / Avatar <span style="color: #ef4444;">*</span></label>
+          <div id="avatarPickerGrid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 6px;">
+            <!-- Populated dynamically with AVATAR_PRESETS -->
+          </div>
+          <input type="hidden" id="regAvatarUrl" value="pilot" required>
+        </div>
+
+        <div class="form-group">
+          <label>Email Address <span style="color: #ef4444;">*</span></label>
           <input type="email" id="regEmail" class="form-input" placeholder="captain@team.org" required>
         </div>
         <div class="form-group">
-          <label>Password</label>
+          <label>Password <span style="color: #ef4444;">*</span></label>
           <input type="password" id="regPassword" class="form-input" placeholder="Minimum 6 characters" required minlength="6">
         </div>
         <button type="submit" id="submitRegisterBtn" class="primary-btn" style="width: 100%; justify-content: center; padding: 12px; margin-top: 10px; background: #ffd700; color: #0a0c14;">
-          Create Account & Save Records
+          Complete Profile & Enter
         </button>
       </form>
     </div>
@@ -697,6 +707,42 @@
       const headerAuthArea = document.getElementById('headerAuthArea');
       const logoutBtn = document.getElementById('logoutBtn');
       const lbSearch = document.getElementById('lbSearch');
+      const countrySelect = document.getElementById('regCountry');
+      const avatarGrid = document.getElementById('avatarPickerGrid');
+      const avatarInput = document.getElementById('regAvatarUrl');
+
+      // Populate Country Dropdown
+      if (countrySelect && typeof FGC_COUNTRIES !== 'undefined') {
+        countrySelect.innerHTML = FGC_COUNTRIES.map(c => `
+          <option value="${c.code}" ${c.code === 'CO' ? 'selected' : ''}>${c.flag} ${c.name}</option>
+        `).join('');
+      }
+
+      // Populate Avatar Picker
+      if (avatarGrid && typeof AVATAR_PRESETS !== 'undefined') {
+        avatarGrid.innerHTML = AVATAR_PRESETS.map((av, idx) => `
+          <button type="button" class="avatar-opt-btn ${idx === 0 ? 'selected' : ''}" data-avatar="${av.id}" style="
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: #111422; border: 1.5px solid ${idx === 0 ? '#ffd700' : 'rgba(255,255,255,0.1)'};
+            border-radius: 8px; padding: 6px 4px; cursor: pointer; transition: all 0.2s;
+          ">
+            <span style="font-size: 1.4rem;">${av.icon}</span>
+            <span style="font-size: 0.65rem; color: #94a3b8; margin-top: 2px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;">${av.name}</span>
+          </button>
+        `).join('');
+
+        avatarGrid.querySelectorAll('.avatar-opt-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            avatarGrid.querySelectorAll('.avatar-opt-btn').forEach(b => {
+              b.style.borderColor = 'rgba(255,255,255,0.1)';
+              b.classList.remove('selected');
+            });
+            btn.style.borderColor = '#ffd700';
+            btn.classList.add('selected');
+            if (avatarInput) avatarInput.value = btn.dataset.avatar;
+          });
+        });
+      }
 
       // Check if redirected from a protected route
       const urlParams = new URLSearchParams(window.location.search);
@@ -710,8 +756,8 @@
       // Auth wall interceptor for all protected navigation buttons
       document.querySelectorAll('.auth-required-link').forEach(link => {
         link.addEventListener('click', (e) => {
-          const user = AuthService.getUser();
-          if (!user) {
+          const profile = AuthService.getUserProfile();
+          if (!profile) {
             e.preventDefault();
             const target = link.getAttribute('href');
             if (target) sessionStorage.setItem('fgc_redirect_after_auth', target);
@@ -749,8 +795,6 @@
           if (redir) {
             sessionStorage.removeItem('fgc_redirect_after_auth');
             window.location.href = redir;
-          } else {
-            alert('✓ Welcome back!');
           }
         } catch (err) {
           alert('⚠️ ' + err.message);
@@ -762,20 +806,24 @@
 
       registerForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const username = document.getElementById('regUsername').value;
+        const role = document.getElementById('regRole').value;
         const teamName = document.getElementById('regTeamName').value;
         const country = document.getElementById('regCountry').value;
-        const number = document.getElementById('regTeamNumber').value;
+        const avatarUrl = document.getElementById('regAvatarUrl').value;
         const email = document.getElementById('regEmail').value;
         const pass = document.getElementById('regPassword').value;
         const submitBtn = document.getElementById('submitRegisterBtn');
 
         try {
           submitBtn.disabled = true;
-          submitBtn.textContent = 'Creating account...';
+          submitBtn.textContent = 'Setting up profile...';
           await AuthService.signUp(email, pass, {
+            username,
+            role,
             teamName,
             countryCode: country,
-            teamNumber: number
+            avatarUrl
           });
           authModal.classList.remove('active');
 
@@ -783,14 +831,12 @@
           if (redir) {
             sessionStorage.removeItem('fgc_redirect_after_auth');
             window.location.href = redir;
-          } else {
-            alert('✓ Account registered successfully!');
           }
         } catch (err) {
           alert('⚠️ ' + err.message);
         } finally {
           submitBtn.disabled = false;
-          submitBtn.textContent = 'Create Account & Save Records';
+          submitBtn.textContent = 'Complete Profile & Enter';
         }
       });
 
@@ -802,25 +848,46 @@
       }
 
       AuthService.subscribe((user, profile) => {
-        if (user && profile) {
-          if (userBanner) userBanner.style.display = 'flex';
-          if (headerAuthArea) headerAuthArea.innerHTML = `
-            <span style="font-size: 0.85rem; color: #ffd700; font-weight: 600; font-family: var(--font-display);">
-              ${SecurityUtils.sanitizeText(profile.team_name)}
-            </span>
-          `;
-          const nameEl = document.getElementById('userTeamName');
-          const subEl = document.getElementById('userSubtitle');
-          if (nameEl) nameEl.textContent = profile.team_name;
-          if (subEl) subEl.textContent = `${profile.country_code} • ${profile.team_number || 'FGC Team'}`;
+        if (profile) {
+          const cInfo = getCountryInfo(profile.country_code);
+          const avObj = (typeof AVATAR_PRESETS !== 'undefined') ? (AVATAR_PRESETS.find(a => a.id === profile.avatar_url) || AVATAR_PRESETS[0]) : { icon: '🤖', bg: '#3b82f6' };
+          const roleLabel = profile.role === 'mentor' ? '🛡️ Mentor' : '🎓 Student';
+
+          if (userBanner) {
+            userBanner.style.display = 'flex';
+            const nameEl = document.getElementById('userTeamName');
+            const subEl = document.getElementById('userSubtitle');
+            if (nameEl) nameEl.textContent = `${cInfo.flag} ${profile.team_name}`;
+            if (subEl) subEl.textContent = `@${profile.username || 'user'} • ${cInfo.name} • ${roleLabel}`;
+          }
+
+          if (headerAuthArea) {
+            headerAuthArea.innerHTML = `
+              <div style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.06); padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(255,215,0,0.2);">
+                <span style="font-size: 1.1rem;">${avObj.icon}</span>
+                <div style="display: flex; flex-direction: column; text-align: left;">
+                  <span style="font-size: 0.78rem; font-weight: 700; color: #ffd700; line-height: 1.1;">@${profile.username || 'User'} ${cInfo.flag}</span>
+                  <span style="font-size: 0.68rem; color: #94a3b8; line-height: 1.1;">${profile.team_name}</span>
+                </div>
+                <button id="headerLogoutBtn" style="background: transparent; border: none; color: #ef4444; font-size: 0.75rem; cursor: pointer; padding: 2px 4px; margin-left: 4px;" title="Sign Out">✕</button>
+              </div>
+            `;
+            document.getElementById('headerLogoutBtn')?.addEventListener('click', async () => {
+              await AuthService.signOut();
+              window.location.reload();
+            });
+          }
         } else {
           if (userBanner) userBanner.style.display = 'none';
-          if (headerAuthArea) headerAuthArea.innerHTML = `
-            <button id="openAuthModalBtn" class="primary-btn" style="padding: 7px 14px; font-size: 0.8rem;">
-              <span>Sign In</span>
-            </button>
-          `;
-          document.getElementById('openAuthModalBtn')?.addEventListener('click', () => authModal.classList.add('active'));
+          if (headerAuthArea) {
+            headerAuthArea.innerHTML = `
+              <button id="openAuthModalBtn" class="primary-btn" style="padding: 7px 14px; font-size: 0.8rem;">
+                <svg class="icon-svg" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                <span>Sign In</span>
+              </button>
+            `;
+            document.getElementById('openAuthModalBtn')?.addEventListener('click', () => authModal.classList.add('active'));
+          }
         }
       });
 
@@ -839,7 +906,7 @@
         if (!currentLeaderboard || currentLeaderboard.length === 0) {
           tbody.innerHTML = `
             <tr>
-              <td colspan="6" style="text-align: center; color: #94a3b8; padding: 36px 16px; font-size: 0.88rem;">
+              <td colspan="7" style="text-align: center; color: #94a3b8; padding: 36px 16px; font-size: 0.88rem;">
                 <div style="margin-bottom: 8px; font-size: 1.2rem; color: #ffd700;">🌐</div>
                 <strong>No match records registered in the database yet.</strong><br>
                 <span style="font-size: 0.78rem; color: #64748b;">Sign in, launch the 2D simulator, and complete a match to set the first world record!</span>
@@ -851,26 +918,42 @@
 
         const q = filterText.toLowerCase().trim();
         const filtered = currentLeaderboard.filter(t => 
+          (t.username && t.username.toLowerCase().includes(q)) ||
           (t.team_name && t.team_name.toLowerCase().includes(q)) || 
-          (t.country_code && t.country_code.toLowerCase().includes(q)) || 
-          (t.team_number && t.team_number.toLowerCase().includes(q))
+          (t.country_code && t.country_code.toLowerCase().includes(q))
         );
 
         if (filtered.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #94a3b8; padding: 20px;">No matching team records found.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">No matching team records found.</td></tr>';
           return;
         }
 
-        tbody.innerHTML = filtered.map(item => `
-          <tr>
-            <td class="lb-rank" style="color: ${item.rank <= 3 ? '#ffd700' : '#94a3b8'}; font-weight: 700;">#${item.rank}</td>
-            <td style="font-weight: 600; color: #fff;">${SecurityUtils.sanitizeText(item.team_name)}</td>
-            <td>${item.country_code || 'CO'}</td>
-            <td style="color: #94a3b8;">${item.team_number || '#--'}</td>
-            <td>${item.matches_played || 1}</td>
-            <td><strong style="color: #2dd264; font-size: 0.95rem;">${item.best_score || item.final_score || 0} pts</strong></td>
-          </tr>
-        `).join('');
+        tbody.innerHTML = filtered.map(item => {
+          const cInfo = getCountryInfo(item.country_code);
+          const avObj = (typeof AVATAR_PRESETS !== 'undefined') ? (AVATAR_PRESETS.find(a => a.id === item.avatar_url) || AVATAR_PRESETS[0]) : { icon: '🤖', bg: '#3b82f6' };
+          const roleBadge = item.role === 'mentor' 
+            ? `<span class="badge" style="background: rgba(255,215,0,0.15); color: #ffd700; font-size: 0.72rem;">🛡️ Mentor</span>`
+            : `<span class="badge" style="background: rgba(56,189,248,0.15); color: #38bdf8; font-size: 0.72rem;">🎓 Student</span>`;
+
+          const rankDisplay = item.rank === 1 ? '🥇 #1' : item.rank === 2 ? '🥈 #2' : item.rank === 3 ? '🥉 #3' : `#${item.rank}`;
+
+          return `
+            <tr>
+              <td class="lb-rank" style="color: ${item.rank <= 3 ? '#ffd700' : '#94a3b8'}; font-weight: 700;">${rankDisplay}</td>
+              <td>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 1.2rem;">${avObj.icon}</span>
+                  <span style="font-weight: 600; color: #ffffff;">@${SecurityUtils.sanitizeText(item.username || 'Player')}</span>
+                </div>
+              </td>
+              <td style="font-weight: 600; color: #e2e8f0;">${SecurityUtils.sanitizeText(item.team_name)}</td>
+              <td><span style="font-size: 1.1rem; margin-right: 4px;">${cInfo.flag}</span> ${cInfo.name}</td>
+              <td>${roleBadge}</td>
+              <td style="color: #94a3b8;">${item.matches_played || 1}</td>
+              <td><strong style="color: #ffd700; font-family: var(--font-display); font-size: 0.95rem;">${(item.best_score || 0).toLocaleString()} pts</strong></td>
+            </tr>
+          `;
+        }).join('');
       }
 
       renderLeaderboardTable();

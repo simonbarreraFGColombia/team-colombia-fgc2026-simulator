@@ -1282,6 +1282,94 @@ function initRobots() {
       r.linearMotionProgress = 0.0;
     }
   });
+
+  // Dynamic Country and Team assignment (Player's country by default, guaranteed Colombia, random world pool without North Korea)
+  assignRobotTeams();
+}
+
+function assignRobotTeams() {
+  const profile = (window.AuthService && AuthService.getUserProfile()) || {
+    username: 'Player',
+    team_name: 'Team Colombia',
+    country_code: 'CO',
+    avatar_url: 'pilot'
+  };
+
+  const userCountryInfo = (typeof getCountryInfo === 'function') 
+    ? getCountryInfo(profile.country_code || 'CO')
+    : { code: 'CO', name: 'Colombia', flag: '🇨🇴' };
+
+  const userTeamName = profile.team_name || `Team ${userCountryInfo.name}`;
+  const userCountryCode = userCountryInfo.code;
+  const userFlag = userCountryInfo.flag;
+
+  // Catalog of world countries (excluding user's country, Colombia, and North Korea 'KP')
+  const catalog = (typeof FGC_COUNTRIES !== 'undefined') ? FGC_COUNTRIES : [
+    { code: 'US', name: 'United States', flag: '🇺🇸' },
+    { code: 'MX', name: 'Mexico', flag: '🇲🇽' },
+    { code: 'DE', name: 'Germany', flag: '🇩🇪' },
+    { code: 'KZ', name: 'Kazakhstan', flag: '🇰🇿' },
+    { code: 'KR', name: 'South Korea', flag: '🇰🇷' },
+    { code: 'JP', name: 'Japan', flag: '🇯🇵' },
+    { code: 'BR', name: 'Brazil', flag: '🇧🇷' },
+    { code: 'FR', name: 'France', flag: '🇫🇷' },
+    { code: 'CA', name: 'Canada', flag: '🇨🇦' },
+    { code: 'AU', name: 'Australia', flag: '🇦🇺' }
+  ];
+
+  const availablePool = catalog.filter(c => 
+    c.code !== userCountryCode && 
+    c.code !== 'CO' && 
+    c.code !== 'KP'
+  );
+
+  const shuffled = [...availablePool].sort(() => 0.5 - Math.random());
+
+  // Guarantee Team Colombia is always present in one of the other 5 robot slots (if user is not Colombia)
+  const colombiaBotIndex = (userCountryCode !== 'CO') ? Math.floor(Math.random() * 5) : -1;
+
+  const botList = [];
+  let poolIdx = 0;
+
+  for (let i = 0; i < 5; i++) {
+    if (i === colombiaBotIndex) {
+      botList.push({
+        teamName: 'Team Colombia',
+        countryCode: 'CO',
+        countryName: 'Colombia',
+        flag: '🇨🇴',
+        isColombia: true
+      });
+    } else {
+      const c = shuffled[poolIdx % shuffled.length];
+      poolIdx++;
+      botList.push({
+        teamName: `Team ${c.name}`,
+        countryCode: c.code,
+        countryName: c.name,
+        flag: c.flag,
+        isColombia: false
+      });
+    }
+  }
+
+  let otherIdx = 0;
+  robots.forEach(r => {
+    if (r.isPlayer1) {
+      r.teamName = userTeamName;
+      r.countryCode = userCountryCode;
+      r.countryName = userCountryInfo.name;
+      r.flag = userFlag;
+      r.avatarUrl = profile.avatar_url || 'pilot';
+    } else {
+      const b = botList[otherIdx++] || { teamName: 'Team World', countryCode: 'UN', countryName: 'World', flag: '🌐' };
+      r.teamName = b.teamName;
+      r.countryCode = b.countryCode;
+      r.countryName = b.countryName;
+      r.flag = b.flag;
+      r.avatarUrl = 'pilot';
+    }
+  });
 }
 
 function inContactZone(robot) {
@@ -2738,17 +2826,27 @@ function renderRobots(c, cEl) {
       c.strokeRect(-half, barY, barW, barH);
     }
 
-    // 6. ETIQUETA DEL ROBOT
-    let label = r.isPlayer1 ? '★ TÚ' : r.isPlayer2 ? '★ P2' : r.id.slice(-2);
-    c.fillStyle = 'rgba(10,12,20,0.8)';
+    // 6. ETIQUETA DEL ROBOT (Bandera y nombre de equipo de cada país)
+    const flag = r.flag || (r.id === `${pa}R1` ? '🇨🇴' : '🌐');
+    let shortName = r.isPlayer1 ? '★ YOU' : (r.teamName || r.id.slice(-2));
+    if (shortName.length > 14) shortName = shortName.slice(0, 12) + '…';
+    const tagText = `${flag} ${shortName}`;
+
+    c.font = `bold ${Math.max(8, S(cEl) * 0.009)}px Montserrat, sans-serif`;
+    const textW = Math.max(38, c.measureText(tagText).width + 12);
+
+    c.fillStyle = 'rgba(10,12,20,0.88)';
     c.beginPath();
-    c.roundRect(-16, half + 2, 32, 12, 3);
+    c.roundRect(-textW / 2, half + 2, textW, 14, 4);
     c.fill();
-    c.fillStyle = r.isPlayer1 ? COL.playerHighlight : r.isPlayer2 ? '#5c9aff' : '#ccc';
-    c.font = `bold ${Math.max(8, S(cEl) * 0.009)}px Montserrat`;
+    c.strokeStyle = r.isPlayer1 ? 'rgba(255,215,0,0.6)' : (r.alliance === 'red' ? 'rgba(232,48,72,0.4)' : 'rgba(56,189,248,0.4)');
+    c.lineWidth = 1;
+    c.stroke();
+
+    c.fillStyle = r.isPlayer1 ? COL.playerHighlight : (r.isPlayer2 ? '#5c9aff' : '#f1f5f9');
     c.textAlign = 'center';
-    c.textBaseline = 'alphabetic';
-    c.fillText(label, 0, half + 11);
+    c.textBaseline = 'middle';
+    c.fillText(tagText, 0, half + 9);
 
     c.restore();
   });

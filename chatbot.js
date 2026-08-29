@@ -1,5 +1,5 @@
 /**
- * BARU AI - Strategic Assistant for FGC 2026 Game Simulator
+ * ColBot - Strategic AI Engineering Assistant for FGC 2026
  * Team Colombia
  */
 
@@ -9,7 +9,7 @@
     messages: [
       {
         role: 'assistant',
-        content: '¡Hola! 🤖 Soy **BARU AI**, tu asistente estratégico de ingeniería para **FIRST Global Challenge 2026: Igniting Innovation**.\n\n¿En qué puedo ayudarte hoy?\n- Optimizar las *specs* de tu robot\n- Tácticas de *Buddy Climb* y *Linear Motion*\n- Estrategias de alianza y ciclo de partido'
+        content: 'Hello! 🤖 I am **ColBot**, your official AI engineering & tactical assistant for **FIRST Global Challenge 2026: Igniting Innovation**.\n\nHow can I help you today?\n- Tune and optimize robot specs (Speed, Hopper, Hook)\n- Master *Buddy Climb* & *Linear Motion* physics\n- Plan 3-robot alliance strategies & match cycles'
       }
     ],
     isLoading: false,
@@ -25,9 +25,9 @@
       container.innerHTML = `
         <!-- Floating Launcher -->
         <div class="chatbot-launcher" id="chatbotLauncher">
-          <div class="chatbot-badge-callout">🤖 Asistente IA FGC</div>
-          <button class="chatbot-toggle-btn" id="chatbotToggleBtn" aria-label="Abrir Asistente IA">
-            💬
+          <div class="chatbot-badge-callout">🤖 ColBot AI</div>
+          <button class="chatbot-toggle-btn" id="chatbotToggleBtn" aria-label="Open ColBot AI">
+            <svg style="width: 22px; height: 22px; stroke: #0a0c14; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
           </button>
         </div>
 
@@ -37,11 +37,11 @@
             <div class="chatbot-title-area">
               <div class="chatbot-avatar">🇨🇴</div>
               <div class="chatbot-title">
-                <h4>BARU AI</h4>
-                <span class="chatbot-status">Estratega FGC 2026</span>
+                <h4>ColBot AI</h4>
+                <span class="chatbot-status">FGC 2026 Engineering Strategist</span>
               </div>
             </div>
-            <button class="chatbot-close-btn" id="chatbotCloseBtn" aria-label="Cerrar chat">✕</button>
+            <button class="chatbot-close-btn" id="chatbotCloseBtn" aria-label="Close chat">✕</button>
           </div>
 
           <div class="chatbot-messages" id="chatbotMessages">
@@ -49,15 +49,15 @@
           </div>
 
           <div class="chatbot-quick-prompts">
-            <button class="quick-prompt-chip" data-prompt="¿Cuál es la mejor estrategia de escalada?">🧗 Escalada Óptima</button>
-            <button class="quick-prompt-chip" data-prompt="¿Cómo funciona el Linear Motion?">📦 Linear Motion</button>
-            <button class="quick-prompt-chip" data-prompt="¿Cómo maximizar puntos con el Human Player?">🎯 Human Player</button>
-            <button class="quick-prompt-chip" data-prompt="¿Qué specs recomiendas para un ciclado rápido?">⚡ Specs de Velocidad</button>
+            <button class="quick-prompt-chip" data-prompt="What is the highest-scoring climbing strategy in Zone 3?">🧗 Optimal Climbing</button>
+            <button class="quick-prompt-chip" data-prompt="How does the Linear Motion mechanism extension work?">📦 Linear Motion</button>
+            <button class="quick-prompt-chip" data-prompt="How to maximize match cycles with the Human Player?">🎯 Human Player</button>
+            <button class="quick-prompt-chip" data-prompt="What robot specs do you recommend for rapid cycling?">⚡ High-Speed Specs</button>
           </div>
 
           <form class="chatbot-input-area" id="chatbotForm">
-            <input type="text" class="chatbot-input" id="chatbotInput" placeholder="Pregunta sobre estrategia, reglas o specs..." maxlength="500" autocomplete="off">
-            <button type="submit" class="chatbot-send-btn" id="chatbotSendBtn" aria-label="Enviar pregunta">➤</button>
+            <input type="text" class="chatbot-input" id="chatbotInput" placeholder="Ask ColBot about rules, strategy, or robot specs..." maxlength="500" autocomplete="off">
+            <button type="submit" class="chatbot-send-btn" id="chatbotSendBtn" aria-label="Send query">➤</button>
           </form>
         </div>
       `;
