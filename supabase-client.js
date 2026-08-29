@@ -3,10 +3,10 @@
  * FGC 2026 Game Simulator - Team Colombia
  */
 
-// Global Configuration (Defaults or overridden from env/storage)
+// Global Configuration (Live Supabase Project)
 const SUPABASE_CONFIG = {
-  url: window.__ENV_SUPABASE_URL || localStorage.getItem('FGC_SUPABASE_URL') || 'https://xyzcompany.supabase.co',
-  anonKey: window.__ENV_SUPABASE_ANON_KEY || localStorage.getItem('FGC_SUPABASE_ANON_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.dummy_anon_key'
+  url: window.__ENV_SUPABASE_URL || localStorage.getItem('FGC_SUPABASE_URL') || 'https://trocdxhugqfagdegbbgz.supabase.co',
+  anonKey: window.__ENV_SUPABASE_ANON_KEY || localStorage.getItem('FGC_SUPABASE_ANON_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRyb2NkeGh1Z3FmYWdkZWdiYmd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgwMDUyOTksImV4cCI6MjEwMzU4MTI5OX0.eil2VNWjAJlTNo6ei-UO9GnyoH7l9fnocSUjn3PT348'
 };
 
 // Initialize Supabase Client
