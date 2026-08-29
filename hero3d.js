@@ -36,13 +36,13 @@ function initHero3D() {
   goldRim.position.set(-9, -6, 6);
   scene.add(goldRim);
 
-  // Flickering Fire Point Lights
-  const fireLight = new THREE.PointLight(0xff4500, 4.2, 14, 1.4);
-  fireLight.position.set(0.1, -0.6, 1.2);
+  // Flickering Deep Fire Point Lights (Backlight & Rim Glow on Mechanical Tools)
+  const fireLight = new THREE.PointLight(0xff4500, 5.2, 22, 1.3);
+  fireLight.position.set(0.2, 0.0, -3.8);
   scene.add(fireLight);
 
-  const fireInnerLight = new THREE.PointLight(0xffd700, 3.0, 8, 1.8);
-  fireInnerLight.position.set(0.1, -0.2, 1.4);
+  const fireInnerLight = new THREE.PointLight(0xffd700, 3.8, 14, 1.6);
+  fireInnerLight.position.set(0.2, 0.5, -3.2);
   scene.add(fireInnerLight);
 
   // ── Materials ──
@@ -75,7 +75,7 @@ function initHero3D() {
   scene.add(heroWorld);
 
   // ═══════════════════════════════════════════════════════════
-  // 1. ADJUSTABLE CRESCENT WRENCH (Llave Inglesa)
+  // 1. ADJUSTABLE CRESCENT WRENCH (Llave Inglesa) - Foreground Z: +0.4
   // ═══════════════════════════════════════════════════════════
   const wrenchGroup = new THREE.Group();
 
@@ -160,7 +160,7 @@ function initHero3D() {
   heroWorld.add(wrenchGroup);
 
   // ═══════════════════════════════════════════════════════════
-  // 2. PRECISION INDUSTRIAL HELICAL GEAR (Engranaje)
+  // 2. PRECISION INDUSTRIAL HELICAL GEAR (Engranaje) - Midground Z: -0.6
   // ═══════════════════════════════════════════════════════════
   const gearGroup = new THREE.Group();
   const numTeeth = 12;
@@ -286,15 +286,15 @@ function initHero3D() {
       vUv = uv;
       vNormal = normal;
       vec3 pos = position;
-      float heightNorm = clamp((pos.y + 1.2) / 3.0, 0.0, 1.0);
+      float heightNorm = clamp((pos.y + 1.6) / 4.2, 0.0, 1.0);
       
       // Multi-frequency turbulent organic deformation
-      float n1 = snoise(vec3(pos.x * 2.2, pos.y * 2.8 - uTime * 3.5, pos.z * 2.2));
-      float n2 = snoise(vec3(pos.x * 4.5, pos.y * 5.2 - uTime * 5.8, pos.z * 4.5)) * 0.4;
+      float n1 = snoise(vec3(pos.x * 2.0, pos.y * 2.4 - uTime * 3.4, pos.z * 2.0));
+      float n2 = snoise(vec3(pos.x * 4.2, pos.y * 4.8 - uTime * 5.4, pos.z * 4.2)) * 0.4;
       
-      pos += normal * (n1 + n2) * (0.35 * heightNorm);
-      pos.x += snoise(vec3(2.0, pos.y * 2.2 - uTime * 3.0, 0.0)) * 0.22 * heightNorm;
-      pos.z += snoise(vec3(8.0, pos.y * 2.2 - uTime * 3.0, 0.0)) * 0.22 * heightNorm;
+      pos += normal * (n1 + n2) * (0.42 * heightNorm);
+      pos.x += snoise(vec3(2.0, pos.y * 2.0 - uTime * 2.8, 0.0)) * 0.28 * heightNorm;
+      pos.z += snoise(vec3(8.0, pos.y * 2.0 - uTime * 2.8, 0.0)) * 0.28 * heightNorm;
 
       vPosition = pos;
       gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
@@ -356,44 +356,44 @@ function initHero3D() {
     }
 
     void main() {
-      float y = clamp((vPosition.y + 1.2) / 3.0, 0.0, 1.0);
+      float y = clamp((vPosition.y + 1.6) / 4.2, 0.0, 1.0);
       
-      float n1 = snoise(vec3(vPosition.x * 2.8, vPosition.y * 3.4 - uTime * 4.2, vPosition.z * 2.8));
-      float n2 = snoise(vec3(vPosition.x * 5.6, vPosition.y * 7.2 - uTime * 7.5, vPosition.z * 5.6)) * 0.5;
-      float n3 = snoise(vec3(vPosition.x * 11.0, vPosition.y * 14.0 - uTime * 11.0, vPosition.z * 11.0)) * 0.25;
+      float n1 = snoise(vec3(vPosition.x * 2.4, vPosition.y * 3.0 - uTime * 3.8, vPosition.z * 2.4));
+      float n2 = snoise(vec3(vPosition.x * 5.0, vPosition.y * 6.5 - uTime * 7.0, vPosition.z * 5.0)) * 0.5;
+      float n3 = snoise(vec3(vPosition.x * 10.0, vPosition.y * 12.0 - uTime * 10.0, vPosition.z * 10.0)) * 0.25;
       float totalNoise = (n1 + n2 + n3 + 1.0) * 0.5;
 
       float bottomFade = smoothstep(0.0, 0.12, y);
-      float topFade = smoothstep(1.0, 0.42, y - (1.0 - totalNoise) * 0.38);
+      float topFade = smoothstep(1.0, 0.40, y - (1.0 - totalNoise) * 0.40);
       float alpha = bottomFade * topFade;
 
       if (alpha < 0.02) discard;
 
-      // Realistic Incandescent Color Temperature Spectrum
+      // Incandescent Color Temperature Spectrum
       vec3 hotWhite = vec3(1.0, 0.98, 0.94);
       vec3 goldFlame = vec3(1.0, 0.82, 0.15);
       vec3 fieryOrange = vec3(1.0, 0.42, 0.03);
       vec3 deepCrimson = vec3(0.85, 0.08, 0.01);
       vec3 smokeAsh = vec3(0.2, 0.04, 0.01);
 
-      float heat = totalNoise * (1.15 - y * 0.65);
+      float heat = totalNoise * (1.18 - y * 0.60);
 
       vec3 col;
-      if (heat > 0.72) {
-        col = mix(goldFlame, hotWhite, (heat - 0.72) / 0.28);
-      } else if (heat > 0.42) {
-        col = mix(fieryOrange, goldFlame, (heat - 0.42) / 0.30);
-      } else if (heat > 0.18) {
-        col = mix(deepCrimson, fieryOrange, (heat - 0.18) / 0.24);
+      if (heat > 0.70) {
+        col = mix(goldFlame, hotWhite, (heat - 0.70) / 0.30);
+      } else if (heat > 0.40) {
+        col = mix(fieryOrange, goldFlame, (heat - 0.40) / 0.30);
+      } else if (heat > 0.16) {
+        col = mix(deepCrimson, fieryOrange, (heat - 0.16) / 0.24);
       } else {
-        col = mix(smokeAsh, deepCrimson, heat / 0.18);
+        col = mix(smokeAsh, deepCrimson, heat / 0.16);
       }
 
       vec3 viewDir = normalize(-vPosition);
-      float fresnel = pow(1.0 - max(dot(normalize(vNormal), viewDir), 0.0), 2.5);
-      col += fresnel * fieryOrange * 0.85;
+      float fresnel = pow(1.0 - max(dot(normalize(vNormal), viewDir), 0.0), 2.2);
+      col += fresnel * fieryOrange * 0.9;
 
-      gl_FragColor = vec4(col * 1.35, alpha * 0.94);
+      gl_FragColor = vec4(col * 1.4, alpha * 0.95);
     }
   `;
 
@@ -411,16 +411,17 @@ function initHero3D() {
     side: THREE.DoubleSide
   });
 
-  // Create High-Density Organic Flame Volumes
+  // ═══════════════════════════════════════════════════════════
+  // CREATE MAJESTIC DEEP BACKGROUND FLAME CLUSTER (Z: -4.5)
+  // ═══════════════════════════════════════════════════════════
   const flameGroup = new THREE.Group();
 
   function createCurvedFlameMesh(radiusBottom, radiusTop, height) {
-    const geo = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, 32, 32, true);
-    // Taper into teardrop
+    const geo = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, 36, 36, true);
     const pos = geo.attributes.position;
     for (let i = 0; i < pos.count; i++) {
       const y = (pos.getY(i) + height / 2) / height; // 0 to 1
-      const bulge = Math.sin(y * Math.PI) * 0.55;
+      const bulge = Math.sin(y * Math.PI) * 0.6;
       pos.setX(i, pos.getX(i) * (1.0 + bulge));
       pos.setZ(i, pos.getZ(i) * (1.0 + bulge));
     }
@@ -428,32 +429,37 @@ function initHero3D() {
     return new THREE.Mesh(geo, fireShaderMat);
   }
 
-  // 1. Primary Central Flame Pillar
-  const mainFlame = createCurvedFlameMesh(0.55, 0.05, 3.2);
-  mainFlame.position.y = 0.2;
+  // 1. Towering Central Flame Pillar
+  const mainFlame = createCurvedFlameMesh(0.7, 0.05, 4.4);
+  mainFlame.position.y = 0.4;
   flameGroup.add(mainFlame);
 
-  // 2. Secondary Dancing Flame Tongue (Left Wing)
-  const leftFlame = createCurvedFlameMesh(0.38, 0.03, 2.4);
-  leftFlame.position.set(-0.35, -0.1, 0.2);
-  leftFlame.rotation.z = 0.25;
+  // 2. Wide Left Surging Flame Wing
+  const leftFlame = createCurvedFlameMesh(0.55, 0.04, 3.6);
+  leftFlame.position.set(-0.85, 0.0, 0.3);
+  leftFlame.rotation.z = 0.3;
   flameGroup.add(leftFlame);
 
-  // 3. Secondary Dancing Flame Tongue (Right Wing)
-  const rightFlame = createCurvedFlameMesh(0.42, 0.04, 2.6);
-  rightFlame.position.set(0.4, 0.0, -0.15);
-  rightFlame.rotation.z = -0.22;
+  // 3. Wide Right Surging Flame Wing
+  const rightFlame = createCurvedFlameMesh(0.58, 0.04, 3.8);
+  rightFlame.position.set(0.9, 0.1, -0.2);
+  rightFlame.rotation.z = -0.28;
   flameGroup.add(rightFlame);
 
-  // 4. Base Incandescent Glow Disc
+  // 4. Rear Volumetric Flame Veil (Wide Background Roar)
+  const rearFlame = createCurvedFlameMesh(1.1, 0.06, 5.2);
+  rearFlame.position.set(0.0, 0.6, -0.5);
+  flameGroup.add(rearFlame);
+
+  // 5. Base Incandescent Glow Disc
   const glowCanvas = document.createElement('canvas');
   glowCanvas.width = 128;
   glowCanvas.height = 128;
   const gCtx = glowCanvas.getContext('2d');
   const radGrad = gCtx.createRadialGradient(64, 64, 0, 64, 64, 64);
-  radGrad.addColorStop(0, 'rgba(255, 230, 150, 0.95)');
-  radGrad.addColorStop(0.3, 'rgba(255, 120, 10, 0.7)');
-  radGrad.addColorStop(0.7, 'rgba(255, 40, 0, 0.3)');
+  radGrad.addColorStop(0, 'rgba(255, 235, 160, 0.95)');
+  radGrad.addColorStop(0.3, 'rgba(255, 120, 10, 0.75)');
+  radGrad.addColorStop(0.7, 'rgba(255, 40, 0, 0.35)');
   radGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
   gCtx.fillStyle = radGrad;
   gCtx.fillRect(0, 0, 128, 128);
@@ -462,21 +468,22 @@ function initHero3D() {
   const baseGlowMat = new THREE.MeshBasicMaterial({
     map: glowTex,
     transparent: true,
-    opacity: 0.85,
+    opacity: 0.9,
     blending: THREE.AdditiveBlending,
     depthWrite: false
   });
-  const baseGlowMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 2.4), baseGlowMat);
-  baseGlowMesh.position.set(0, -1.2, 0);
+  const baseGlowMesh = new THREE.Mesh(new THREE.PlaneGeometry(4.5, 4.5), baseGlowMat);
+  baseGlowMesh.position.set(0, -1.6, 0);
   baseGlowMesh.rotation.x = -Math.PI / 2;
   flameGroup.add(baseGlowMesh);
 
-  flameGroup.position.set(0.2, -0.6, 0.8);
-  flameGroup.scale.set(0.9, 0.9, 0.9);
+  // Position Deep in Background (Z = -4.5) with Large Scale (2.4x)
+  flameGroup.position.set(0.3, -0.3, -4.5);
+  flameGroup.scale.set(2.3, 2.4, 2.3);
   heroWorld.add(flameGroup);
 
   // ═══════════════════════════════════════════════════════════
-  // 4. SOFT GLOWING FIERY EMBERS & SPARKS (Canvas Sprites)
+  // 4. MULTI-DEPTH SOFT GLOWING EMBERS & SPARKS (Canvas Sprites)
   // ═══════════════════════════════════════════════════════════
   const sparkCanvas = document.createElement('canvas');
   sparkCanvas.width = 64;
@@ -491,28 +498,29 @@ function initHero3D() {
   sCtx.fillRect(0, 0, 64, 64);
   const sparkTexture = new THREE.CanvasTexture(sparkCanvas);
 
-  const sparkCount = 85;
+  const sparkCount = 110;
   const sparkGeo = new THREE.BufferGeometry();
   const sparkPositions = new Float32Array(sparkCount * 3);
   const sparkVelocities = [];
 
   for (let i = 0; i < sparkCount; i++) {
-    sparkPositions[i * 3] = 0.2 + (Math.random() - 0.5) * 1.6;
-    sparkPositions[i * 3 + 1] = -1.4 + Math.random() * 4.8;
-    sparkPositions[i * 3 + 2] = 0.8 + (Math.random() - 0.5) * 1.4;
+    // Spread in full 3D depth from deep background (Z = -5.0) to foreground (Z = 1.2)
+    sparkPositions[i * 3] = (Math.random() - 0.5) * 6.5;
+    sparkPositions[i * 3 + 1] = -2.5 + Math.random() * 7.5;
+    sparkPositions[i * 3 + 2] = -4.5 + Math.random() * 5.8;
 
     sparkVelocities.push({
-      x: (Math.random() - 0.5) * 0.025,
-      y: 0.035 + Math.random() * 0.065,
-      z: (Math.random() - 0.5) * 0.025,
-      swaySpeed: 2.2 + Math.random() * 3.5,
-      swayDist: 0.018 + Math.random() * 0.025
+      x: (Math.random() - 0.5) * 0.03,
+      y: 0.035 + Math.random() * 0.07,
+      z: (Math.random() - 0.5) * 0.03,
+      swaySpeed: 2.0 + Math.random() * 3.5,
+      swayDist: 0.02 + Math.random() * 0.03
     });
   }
 
   sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPositions, 3));
   const sparkMat = new THREE.PointsMaterial({
-    size: 0.35,
+    size: 0.4,
     map: sparkTexture,
     transparent: true,
     opacity: 0.95,
@@ -527,9 +535,9 @@ function initHero3D() {
   const particleCount = 45;
   const posArray = new Float32Array(particleCount * 3);
   for (let i = 0; i < particleCount * 3; i += 3) {
-    posArray[i] = (Math.random() - 0.5) * 20;
-    posArray[i + 1] = (Math.random() - 0.5) * 16;
-    posArray[i + 2] = (Math.random() - 0.5) * 12;
+    posArray[i] = (Math.random() - 0.5) * 22;
+    posArray[i + 1] = (Math.random() - 0.5) * 18;
+    posArray[i + 2] = (Math.random() - 0.5) * 14;
   }
   particleGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
   const particleMat = new THREE.PointsMaterial({
@@ -563,27 +571,27 @@ function initHero3D() {
     targetX += (mouseX - targetX) * 0.04;
     targetY += (mouseY - targetY) * 0.04;
 
-    // 1. Wrench floating animation
+    // 1. Wrench floating animation (Foreground)
     wrenchGroup.rotation.y = -0.2 + Math.sin(elapsedTime * 0.65) * 0.2 + targetX * 0.35;
     wrenchGroup.rotation.x = 0.35 + Math.cos(elapsedTime * 0.5) * 0.14 - targetY * 0.35;
     wrenchGroup.position.y = 0.2 + Math.sin(elapsedTime * 1.0) * 0.15;
     wormMesh.rotation.x = elapsedTime * 1.5;
 
-    // 2. Gear rotation
+    // 2. Gear rotation (Midground)
     gearGroup.rotation.z = elapsedTime * 0.3;
     gearGroup.rotation.y = 0.3 + Math.sin(elapsedTime * 0.55) * 0.12 + targetX * 0.25;
     gearGroup.position.y = -1.0 + Math.cos(elapsedTime * 0.85) * 0.12;
 
-    // 3. Update Volumetric GLSL Fire Shader Uniforms
+    // 3. Update Volumetric GLSL Fire Shader Uniforms (Deep Background)
     fireUniforms.uTime.value = elapsedTime;
 
-    // Gentle organic swaying of the flame cluster
-    flameGroup.rotation.y = Math.sin(elapsedTime * 0.8) * 0.15 + targetX * 0.2;
-    flameGroup.rotation.z = Math.cos(elapsedTime * 1.2) * 0.05;
+    // Parallax depth motion for the background flame
+    flameGroup.rotation.y = Math.sin(elapsedTime * 0.8) * 0.12 + targetX * 0.15;
+    flameGroup.rotation.z = Math.cos(elapsedTime * 1.2) * 0.04;
 
     // Dynamic Flame Light Intensity Flicker
-    fireLight.intensity = 3.8 + Math.sin(elapsedTime * 14.0) * 0.8 + Math.cos(elapsedTime * 20.0) * 0.5;
-    fireInnerLight.intensity = 2.6 + Math.cos(elapsedTime * 11.0) * 0.7;
+    fireLight.intensity = 4.6 + Math.sin(elapsedTime * 14.0) * 0.9 + Math.cos(elapsedTime * 20.0) * 0.6;
+    fireInnerLight.intensity = 3.2 + Math.cos(elapsedTime * 11.0) * 0.8;
 
     // 4. Rising Embers & Sparks Update
     const pos = sparkGeo.attributes.position.array;
