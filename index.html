@@ -383,7 +383,16 @@
 
       <div class="header-right-group" style="display: flex; align-items: center; gap: 10px;">
         <div id="headerAuthArea">
-          <!-- Dynamically populated: Lang Picker -> Sign In -> Sign Up -->
+          <div class="header-auth-group">
+            <button id="globalHeaderSignInBtn" class="btn-header-signin" type="button">
+              <svg style="width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.2;" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4m-5-4 5-5-5-5m5 5H3"/></svg>
+              <span>Sign In</span>
+            </button>
+            <button id="globalHeaderSignUpBtn" class="btn-header-signup" type="button">
+              <svg style="width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.2;" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+              <span>Sign Up</span>
+            </button>
+          </div>
         </div>
       </div>
     </header>
@@ -803,11 +812,37 @@
         });
       }
 
-      // Check if redirected from a protected route
+      // Check if redirected from a protected route or auth trigger
       const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('auth') === 'required') {
+      if (urlParams.get('auth') === 'required' || urlParams.get('auth') === 'open') {
+        tabLogin.classList.add('active');
+        tabRegister.classList.remove('active');
+        loginForm.style.display = 'block';
+        registerForm.style.display = 'none';
+        authModal.classList.add('active');
+      } else if (urlParams.get('auth') === 'register') {
+        tabRegister.classList.add('active');
+        tabLogin.classList.remove('active');
+        registerForm.style.display = 'block';
+        loginForm.style.display = 'none';
         authModal.classList.add('active');
       }
+
+      document.getElementById('globalHeaderSignInBtn')?.addEventListener('click', () => {
+        tabLogin.classList.add('active');
+        tabRegister.classList.remove('active');
+        loginForm.style.display = 'block';
+        registerForm.style.display = 'none';
+        authModal.classList.add('active');
+      });
+
+      document.getElementById('globalHeaderSignUpBtn')?.addEventListener('click', () => {
+        tabRegister.classList.add('active');
+        tabLogin.classList.remove('active');
+        registerForm.style.display = 'block';
+        loginForm.style.display = 'none';
+        authModal.classList.add('active');
+      });
 
       if (openBtn) openBtn.addEventListener('click', () => authModal.classList.add('active'));
       if (closeBtn) closeBtn.addEventListener('click', () => authModal.classList.remove('active'));
@@ -907,11 +942,8 @@
       }
 
       AuthService.subscribe((user, profile) => {
-        const headerNavArea = document.getElementById('headerNavArea');
         if (profile) {
-          if (headerNavArea) headerNavArea.style.display = 'flex';
           const cInfo = getCountryInfo(profile.country_code);
-          const avObj = (typeof AVATAR_PRESETS !== 'undefined') ? (AVATAR_PRESETS.find(a => a.id === profile.avatar_url) || AVATAR_PRESETS[0]) : { icon: '🤖', bg: '#3b82f6' };
           const roleLabel = profile.role === 'mentor' ? '🛡️ Mentor' : '🎓 Student';
 
           if (userBanner) {
@@ -921,35 +953,8 @@
             if (nameEl) nameEl.textContent = `${cInfo.flag} ${profile.team_name}`;
             if (subEl) subEl.textContent = `@${profile.username || 'user'} • ${cInfo.name} • ${roleLabel}`;
           }
-
-          if (headerAuthArea) {
-            headerAuthArea.innerHTML = `
-              <div style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.06); padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(255,215,0,0.2);">
-                <span style="font-size: 1.1rem;">${avObj.icon}</span>
-                <div style="display: flex; flex-direction: column; text-align: left;">
-                  <span style="font-size: 0.78rem; font-weight: 700; color: #ffd700; line-height: 1.1;">@${profile.username || 'User'} ${cInfo.flag}</span>
-                  <span style="font-size: 0.68rem; color: #94a3b8; line-height: 1.1;">${profile.team_name}</span>
-                </div>
-                <button id="headerLogoutBtn" style="background: transparent; border: none; color: #ef4444; font-size: 0.75rem; cursor: pointer; padding: 2px 4px; margin-left: 4px;" title="Sign Out">✕</button>
-              </div>
-            `;
-            document.getElementById('headerLogoutBtn')?.addEventListener('click', async () => {
-              await AuthService.signOut();
-              window.location.reload();
-            });
-          }
         } else {
-          if (headerNavArea) headerNavArea.style.display = 'none';
           if (userBanner) userBanner.style.display = 'none';
-          if (headerAuthArea) {
-            headerAuthArea.innerHTML = `
-              <button id="openAuthModalBtn" class="primary-btn" style="padding: 7px 14px; font-size: 0.8rem;">
-                <svg class="icon-svg" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                <span>Sign In</span>
-              </button>
-            `;
-            document.getElementById('openAuthModalBtn')?.addEventListener('click', () => authModal.classList.add('active'));
-          }
         }
       });
 
