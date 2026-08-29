@@ -1,6 +1,7 @@
 /**
  * FGC 2026 Global Multi-Language System (i18n)
- * Supports 55+ distinct world languages
+ * Supports 75+ distinct world languages
+ * Default: English (en)
  * Team Colombia
  */
 
@@ -59,7 +60,32 @@ const FGC_LANGUAGES = [
   { code: 'ne', name: 'Nepali', native: 'नेपाली', flag: '🇳🇵' },
   { code: 'af', name: 'Afrikaans', native: 'Afrikaans', flag: '🇿🇦' },
   { code: 'sw', name: 'Swahili', native: 'Kiswahili', flag: '🇰🇪' },
-  { code: 'is', name: 'Icelandic', native: 'Íslenska', flag: '🇮🇸' }
+  { code: 'is', name: 'Icelandic', native: 'Íslenska', flag: '🇮🇸' },
+  // ── 24 Additional World Languages (Total 78) ──
+  { code: 'ca', name: 'Catalan', native: 'Català', flag: '🇪🇸' },
+  { code: 'eu', name: 'Basque', native: 'Euskara', flag: '🇪🇸' },
+  { code: 'gl', name: 'Galician', native: 'Galego', flag: '🇪🇸' },
+  { code: 'cy', name: 'Welsh', native: 'Cymraeg', flag: '🇬🇧' },
+  { code: 'ga', name: 'Irish', native: 'Gaeilge', flag: '🇮🇪' },
+  { code: 'la', name: 'Latin', native: 'Latina', flag: '🇻🇦' },
+  { code: 'eo', name: 'Esperanto', native: 'Esperanto', flag: '🌐' },
+  { code: 'ta', name: 'Tamil', native: 'தமிழ்', flag: '🇮🇳' },
+  { code: 'te', name: 'Telugu', native: 'తెలుగు', flag: '🇮🇳' },
+  { code: 'mr', name: 'Marathi', native: 'मराठी', flag: '🇮🇳' },
+  { code: 'gu', name: 'Gujarati', native: 'ગુજરાતી', flag: '🇮🇳' },
+  { code: 'kn', name: 'Kannada', native: 'ಕನ್ನಡ', flag: '🇮🇳' },
+  { code: 'ml', name: 'Malayalam', native: 'മലയാളം', flag: '🇮🇳' },
+  { code: 'pa', name: 'Punjabi', native: 'ਪੰਜਾਬੀ', flag: '🇮🇳' },
+  { code: 'am', name: 'Amharic', native: 'አማርኛ', flag: '🇪🇹' },
+  { code: 'yo', name: 'Yoruba', native: 'Èdè Yorùbá', flag: '🇳🇬' },
+  { code: 'ig', name: 'Igbo', native: 'Asụsụ Igbo', flag: '🇳🇬' },
+  { code: 'zu', name: 'Zulu', native: 'isiZulu', flag: '🇿🇦' },
+  { code: 'ceb', name: 'Cebuano', native: 'Sinugboanon', flag: '🇵🇭' },
+  { code: 'haw', name: 'Hawaiian', native: 'ʻŌlelo Hawaiʻi', flag: '🌺' },
+  { code: 'sm', name: 'Samoan', native: 'Gagana Sāmoa', flag: '🇼🇸' },
+  { code: 'mi', name: 'Maori', native: 'Te Reo Māori', flag: '🇳🇿' },
+  { code: 'ht', name: 'Haitian Creole', native: 'Kreyòl Ayisyen', flag: '🇭🇹' },
+  { code: 'sq', name: 'Albanian', native: 'Shqip', flag: '🇦🇱' }
 ];
 
 const I18nManager = {
@@ -73,14 +99,12 @@ const I18nManager = {
   },
 
   injectGoogleTranslateScript() {
-    // Inject hidden container
     if (!document.getElementById('google_translate_element')) {
       const gDiv = document.createElement('div');
       gDiv.id = 'google_translate_element';
       document.body.appendChild(gDiv);
     }
 
-    // Define Global Callback
     window.googleTranslateElementInit = () => {
       if (window.google && window.google.translate) {
         new window.google.translate.TranslateElement({
@@ -95,7 +119,6 @@ const I18nManager = {
       }
     };
 
-    // Load Translate script if not present
     if (!document.getElementById('gt_script')) {
       const script = document.createElement('script');
       script.id = 'gt_script';
@@ -113,7 +136,7 @@ const I18nManager = {
     container.id = 'fgcLangPicker';
 
     container.innerHTML = `
-      <button class="lang-picker-btn" id="langPickerBtn" type="button" aria-label="Cambiar idioma / Switch language">
+      <button class="lang-picker-btn" id="langPickerBtn" type="button" aria-label="Switch language">
         <span class="lang-flag" id="currentLangFlag">${currentLangObj.flag}</span>
         <span class="lang-text" id="currentLangName">${currentLangObj.code.toUpperCase()}</span>
         <span class="lang-arrow">▼</span>
@@ -121,7 +144,7 @@ const I18nManager = {
 
       <div class="lang-picker-dropdown" id="langPickerDropdown">
         <div class="lang-search-box">
-          <input type="text" class="lang-search-input" id="langSearchInput" placeholder="Buscar idioma / Search (55+)...">
+          <input type="text" class="lang-search-input" id="langSearchInput" placeholder="Search (78 languages)...">
         </div>
         <div class="lang-list" id="langList">
           ${FGC_LANGUAGES.map(l => `
@@ -137,11 +160,9 @@ const I18nManager = {
       </div>
     `;
 
-    // Try to attach to navigation area or header
     const header = document.querySelector('.app-header');
     if (header) {
-      // Look for nav-area or top right container
-      const nav = header.querySelector('.nav-area') || header.querySelector('div:last-child');
+      const nav = header.querySelector('.nav-area');
       if (nav) {
         header.insertBefore(container, nav.nextSibling || nav);
       } else {
@@ -199,39 +220,35 @@ const I18nManager = {
       list.querySelectorAll('.lang-item').forEach(item => {
         item.addEventListener('click', (e) => {
           e.stopPropagation();
-          const code = item.dataset.code;
+          const code = item.getAttribute('data-code');
           this.applyLanguage(code, true);
           this.isOpen = false;
-          dropdown?.classList.remove('active');
+          dropdown.classList.remove('active');
         });
       });
     }
   },
 
-  applyLanguage(code, doReload = true) {
-    this.currentLang = code;
-    localStorage.setItem('fgc_lang', code);
-    document.documentElement.lang = code;
-
+  applyLanguage(code, doReload = false) {
     const langObj = FGC_LANGUAGES.find(l => l.code === code) || FGC_LANGUAGES[0];
+    this.currentLang = langObj.code;
+    localStorage.setItem('fgc_lang', this.currentLang);
+
     const flagEl = document.getElementById('currentLangFlag');
     const nameEl = document.getElementById('currentLangName');
     if (flagEl) flagEl.textContent = langObj.flag;
     if (nameEl) nameEl.textContent = langObj.code.toUpperCase();
 
-    // Update selected class
     document.querySelectorAll('.lang-item').forEach(el => {
       el.classList.toggle('selected', el.dataset.code === code);
     });
 
-    // Set Google Translate Cookie
     this.setTranslateCookie(code);
 
     if (doReload) {
       this.triggerGoogleTranslate(code);
     }
 
-    // Inform chatbot about language preference
     window.__FGC_ACTIVE_LANG = langObj;
   },
 
@@ -248,13 +265,11 @@ const I18nManager = {
       select.value = code;
       select.dispatchEvent(new Event('change'));
     } else {
-      // Reload to let cookie trigger translation cleanly
       window.location.reload();
     }
   }
 };
 
-// Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
   I18nManager.init();
 });

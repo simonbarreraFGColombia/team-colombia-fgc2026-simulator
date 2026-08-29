@@ -435,24 +435,39 @@ const LeaderboardService = {
             .map((item, idx) => ({ rank: idx + 1, ...item }));
         }
       } catch (e) {
-        console.warn("Leaderboard live query notice:", e);
+        console.warn("Leaderboard query:", e);
       }
     }
 
-    return [
-      { rank: 1, team_name: 'Team Colombia', country_code: 'CO', team_number: '#108', best_score: 540, matches_played: 34 },
-      { rank: 2, team_name: 'Team Mexico', country_code: 'MX', team_number: '#142', best_score: 495, matches_played: 28 },
-      { rank: 3, team_name: 'Team Germany', country_code: 'DE', team_number: '#56', best_score: 480, matches_played: 25 },
-      { rank: 4, team_name: 'Team Kazakhstan', country_code: 'KZ', team_number: '#88', best_score: 465, matches_played: 22 },
-      { rank: 5, team_name: 'Team USA', country_code: 'US', team_number: '#01', best_score: 460, matches_played: 31 },
-      { rank: 6, team_name: 'Team South Korea', country_code: 'KR', team_number: '#190', best_score: 455, matches_played: 29 },
-      { rank: 7, team_name: 'Team Brazil', country_code: 'BR', team_number: '#77', best_score: 440, matches_played: 20 },
-      { rank: 8, team_name: 'Team Japan', country_code: 'JP', team_number: '#112', best_score: 435, matches_played: 24 }
-    ];
+    // Return empty array when database has no records
+    return [];
+  }
+};
+
+// ── 7. AUTH GUARD & ROUTE PROTECTION ──────────────────────────────
+const AuthGuard = {
+  isProtectedPage() {
+    const p = window.location.pathname.toLowerCase();
+    return p.includes('simulacion') || p.includes('estrategias') || p.includes('calculadora') || p.includes('scouting');
+  },
+
+  checkAccess() {
+    if (!this.isProtectedPage()) return true;
+
+    // Retrieve active user from cache/session
+    const user = AuthService.getUser();
+    if (!user) {
+      // Save target page to redirect back once logged in
+      sessionStorage.setItem('fgc_redirect_after_auth', window.location.href);
+      window.location.replace('index.html?auth=required');
+      return false;
+    }
+    return true;
   }
 };
 
 // Auto-initialize on load
 document.addEventListener('DOMContentLoaded', () => {
   AuthService.init();
+  AuthGuard.checkAccess();
 });

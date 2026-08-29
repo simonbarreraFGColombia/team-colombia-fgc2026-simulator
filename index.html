@@ -258,6 +258,46 @@
       flex: 1;
     }
 
+    /* Refined Unified Module Action Buttons */
+    .module-action-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-family: var(--font-display);
+      font-size: 0.88rem;
+      font-weight: 600;
+      text-decoration: none;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: #ffffff;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      box-sizing: border-box;
+    }
+
+    .module-action-btn:hover {
+      background: rgba(255, 215, 0, 0.15);
+      border-color: #ffd700;
+      color: #ffd700;
+      transform: translateY(-2px);
+    }
+
+    .module-action-btn.featured {
+      background: #ffd700;
+      border-color: #ffd700;
+      color: #0a0c14;
+      box-shadow: 0 4px 14px rgba(255, 215, 0, 0.25);
+    }
+
+    .module-action-btn.featured:hover {
+      background: #ffea75;
+      box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
+    }
+
     /* Leaderboard Card */
     .leaderboard-full-card {
       background: #111422;
@@ -321,9 +361,9 @@
       
       <nav class="nav-area">
         <a href="index.html" class="nav-link active">Portal</a>
-        <a href="simulacion.html" class="nav-link">2D Simulator</a>
-        <a href="estrategias.html" class="nav-link">Tactical Playbook</a>
-        <a href="calculadora.html" class="nav-link">Calculator</a>
+        <a href="simulacion.html" class="nav-link auth-required-link">2D Simulator</a>
+        <a href="estrategias.html" class="nav-link auth-required-link">Tactical Playbook</a>
+        <a href="calculadora.html" class="nav-link auth-required-link">Calculator</a>
       </nav>
 
       <div style="display: flex; align-items: center; gap: 12px;">
@@ -372,15 +412,15 @@
         </p>
 
         <div class="hero-cta-group">
-          <a href="simulacion.html" class="btn-action-hero primary">
+          <a href="simulacion.html" class="btn-action-hero primary auth-required-link">
             <svg class="icon-svg" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h4m-2-2v4m10-2h.01m-3 0h.01"></polygon></svg>
             <span>Launch 2D Simulator</span>
           </a>
-          <a href="estrategias.html" class="btn-action-hero secondary">
+          <a href="estrategias.html" class="btn-action-hero secondary auth-required-link">
             <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"></path><path d="M12 6v6l4 2"></path></svg>
             <span>Strategy Playbook</span>
           </a>
-          <a href="calculadora.html" class="btn-action-hero secondary">
+          <a href="calculadora.html" class="btn-action-hero secondary auth-required-link">
             <svg class="icon-svg" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="8" y1="10" x2="16" y2="10"></line><line x1="8" y1="14" x2="16" y2="14"></line></svg>
             <span>Score Calculator</span>
           </a>
@@ -432,7 +472,8 @@
             Real-time 2:30 matches with rigid-body collision physics, Suppression Unit shooting, <strong>Linear Motion</strong> mechanism extension, and 3-zone climbing with dual USB gamepad support.
           </p>
         </div>
-        <a href="simulacion.html" class="primary-btn" style="text-decoration: none; justify-content: center; text-align: center;">
+        <a href="simulacion.html" class="module-action-btn auth-required-link">
+          <svg class="icon-svg" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
           <span>Open Simulator</span>
         </a>
       </div>
@@ -448,7 +489,8 @@
             Collaborative alliance strategy workshop. Assign tactical roles to all 3 robots, optimize Human Player cycles, and sync live telemetry models.
           </p>
         </div>
-        <a href="estrategias.html" class="primary-btn" style="text-decoration: none; justify-content: center; text-align: center; background: #ffd700; color: #0a0c14;">
+        <a href="estrategias.html" class="module-action-btn featured auth-required-link">
+          <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
           <span>Design Strategy</span>
         </a>
       </div>
@@ -464,7 +506,8 @@
             Rulebook mathematical validation engine. Evaluate regional match scenarios, cooperative alliance ranking points, and climbing multipliers.
           </p>
         </div>
-        <a href="calculadora.html" class="primary-btn" style="text-decoration: none; justify-content: center; text-align: center; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2);">
+        <a href="calculadora.html" class="module-action-btn auth-required-link">
+          <svg class="icon-svg" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="8" y1="10" x2="16" y2="10"></line><line x1="8" y1="14" x2="16" y2="14"></line></svg>
           <span>Open Calculator</span>
         </a>
       </div>
@@ -480,7 +523,7 @@
           </h2>
           <span style="font-size: 0.8rem; color: #94a3b8;">Verified scores recorded in competition from the database</span>
         </div>
-        <a href="simulacion.html" style="color: #ffd700; font-size: 0.82rem; font-weight: 600; text-decoration: none;">
+        <a href="simulacion.html" class="auth-required-link" style="color: #ffd700; font-size: 0.82rem; font-weight: 600; text-decoration: none;">
           Play & Submit Record ➔
         </a>
       </div>
@@ -604,8 +647,27 @@
       const logoutBtn = document.getElementById('logoutBtn');
       const lbSearch = document.getElementById('lbSearch');
 
+      // Check if redirected from a protected route
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('auth') === 'required') {
+        authModal.classList.add('active');
+      }
+
       if (openBtn) openBtn.addEventListener('click', () => authModal.classList.add('active'));
       if (closeBtn) closeBtn.addEventListener('click', () => authModal.classList.remove('active'));
+
+      // Auth wall interceptor for all protected navigation buttons
+      document.querySelectorAll('.auth-required-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+          const user = AuthService.getUser();
+          if (!user) {
+            e.preventDefault();
+            const target = link.getAttribute('href');
+            if (target) sessionStorage.setItem('fgc_redirect_after_auth', target);
+            authModal.classList.add('active');
+          }
+        });
+      });
 
       tabLogin.addEventListener('click', () => {
         tabLogin.classList.add('active');
@@ -631,7 +693,14 @@
           submitBtn.textContent = 'Verifying...';
           await AuthService.signIn(email, pass);
           authModal.classList.remove('active');
-          alert('✓ Welcome back!');
+          
+          const redir = sessionStorage.getItem('fgc_redirect_after_auth');
+          if (redir) {
+            sessionStorage.removeItem('fgc_redirect_after_auth');
+            window.location.href = redir;
+          } else {
+            alert('✓ Welcome back!');
+          }
         } catch (err) {
           alert('⚠️ ' + err.message);
         } finally {
@@ -658,7 +727,14 @@
             teamNumber: number
           });
           authModal.classList.remove('active');
-          alert('✓ Account registered successfully!');
+
+          const redir = sessionStorage.getItem('fgc_redirect_after_auth');
+          if (redir) {
+            sessionStorage.removeItem('fgc_redirect_after_auth');
+            window.location.href = redir;
+          } else {
+            alert('✓ Account registered successfully!');
+          }
         } catch (err) {
           alert('⚠️ ' + err.message);
         } finally {
@@ -670,6 +746,7 @@
       if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
           await AuthService.signOut();
+          window.location.reload();
         });
       }
 
@@ -701,12 +778,26 @@
       try {
         currentLeaderboard = await LeaderboardService.getLeaderboard(50);
       } catch (err) {
-        console.error("Leaderboard loading error:", err);
+        console.error("Leaderboard error:", err);
       }
 
       function renderLeaderboardTable(filterText = '') {
         const tbody = document.getElementById('leaderboardTbody');
         if (!tbody) return;
+
+        if (!currentLeaderboard || currentLeaderboard.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="6" style="text-align: center; color: #94a3b8; padding: 36px 16px; font-size: 0.88rem;">
+                <div style="margin-bottom: 8px; font-size: 1.2rem; color: #ffd700;">🌐</div>
+                <strong>No match records registered in the database yet.</strong><br>
+                <span style="font-size: 0.78rem; color: #64748b;">Sign in, launch the 2D simulator, and complete a match to set the first world record!</span>
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
         const q = filterText.toLowerCase().trim();
         const filtered = currentLeaderboard.filter(t => 
           (t.team_name && t.team_name.toLowerCase().includes(q)) || 
