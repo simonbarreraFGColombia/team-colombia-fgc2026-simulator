@@ -60,7 +60,11 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    const { messages } = req.body || {};
+    let payload = req.body;
+    if (typeof payload === 'string') {
+      try { payload = JSON.parse(payload); } catch (e) { payload = {}; }
+    }
+    const { messages } = payload || {};
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: 'El cuerpo de la solicitud debe incluir un array "messages".' });
     }
