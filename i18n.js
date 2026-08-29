@@ -711,14 +711,36 @@ const I18nManager = {
   translateDOMWithDict(dict) {
     if (!dict || typeof dict !== 'object') return;
 
+    const sanitizeBrandText = (txt) => {
+      if (!txt || typeof txt !== 'string') return txt;
+      return txt
+        .replace(/\b(Équipe|Equipe|Equipo|Team|Команда)\s+(de\s+)?(Colombie|Colômbia|Kolumbien|Колумбии)\b/gi, 'Team Colombia')
+        .replace(/\b(Équipe|Equipe|Equipo|Команда)\s+Colombia\b/gi, 'Team Colombia')
+        .replace(/Kolumbien-Team/gi, 'Team Colombia');
+    };
+
+    const BRAND_PROTECTED = [
+      'Team Colombia',
+      'TEAM COLOMBIA',
+      'TEAM COLOMBIA • FGC 2026',
+      'Team Colombia • FGC 2026',
+      'Fundación Team Colombia',
+      'FUNDACIÓN TEAM COLOMBIA'
+    ];
+
     this.originalNodes.forEach((origVal, node) => {
       if (!node || !node.parentNode) return;
       const trimmed = origVal.trim();
       if (!trimmed) return;
 
-      const translated = dict[trimmed];
+      let translated = dict[trimmed];
+      if (BRAND_PROTECTED.includes(trimmed)) {
+        translated = trimmed;
+      }
+
       // Safety: never replace with empty/whitespace/undefined values
       if (translated && typeof translated === 'string' && translated.trim().length > 0) {
+        translated = sanitizeBrandText(translated);
         node.nodeValue = origVal.replace(trimmed, translated);
       }
     });
@@ -726,14 +748,14 @@ const I18nManager = {
     document.querySelectorAll('[placeholder]').forEach(el => {
       const orig = el.__i18nPlaceholderOrig || el.placeholder;
       if (orig && dict[orig] && dict[orig].trim().length > 0) {
-        el.placeholder = dict[orig];
+        el.placeholder = sanitizeBrandText(dict[orig]);
       }
     });
 
     document.querySelectorAll('[title]').forEach(el => {
       const orig = el.__i18nTitleOrig || el.title;
       if (orig && dict[orig] && dict[orig].trim().length > 0) {
-        el.title = dict[orig];
+        el.title = sanitizeBrandText(dict[orig]);
       }
     });
   },
@@ -742,16 +764,35 @@ const I18nManager = {
     const dict = this.cache[targetLang] || {};
     const missingPhrases = new Set();
 
+    const BRAND_PROTECTED = [
+      'Team Colombia',
+      'TEAM COLOMBIA',
+      'TEAM COLOMBIA • FGC 2026',
+      'Team Colombia • FGC 2026',
+      'Fundación Team Colombia',
+      'FUNDACIÓN TEAM COLOMBIA'
+    ];
+
     this.originalNodes.forEach((origVal) => {
       const trimmed = origVal.trim();
       if (trimmed && trimmed.length > 1 && !/^\d+$/.test(trimmed) && !dict[trimmed]) {
-        missingPhrases.add(trimmed);
+        if (BRAND_PROTECTED.includes(trimmed) || /^(Team Colombia|TEAM COLOMBIA)/i.test(trimmed)) {
+          dict[trimmed] = trimmed;
+        } else {
+          missingPhrases.add(trimmed);
+        }
       }
     });
 
     document.querySelectorAll('[placeholder]').forEach(el => {
       const orig = el.__i18nPlaceholderOrig || el.placeholder;
-      if (orig && !dict[orig]) missingPhrases.add(orig);
+      if (orig && !dict[orig]) {
+        if (BRAND_PROTECTED.includes(orig)) {
+          dict[orig] = orig;
+        } else {
+          missingPhrases.add(orig);
+        }
+      }
     });
 
     const phraseList = Array.from(missingPhrases);
@@ -772,7 +813,15 @@ const I18nManager = {
         if (!res.ok) return;
         const data = await res.json();
         if (data && data[0]) {
-          const translated = data[0].map(x => x[0]).join('').trim();
+          let translated = data[0].map(x => x[0]).join('').trim();
+          if (BRAND_PROTECTED.includes(phrase)) {
+            translated = phrase;
+          } else {
+            translated = translated
+              .replace(/\b(Équipe|Equipe|Equipo|Team|Команда)\s+(de\s+)?(Colombie|Colômbia|Kolumbien|Колумбии)\b/gi, 'Team Colombia')
+              .replace(/\b(Équipe|Equipe|Equipo|Команда)\s+Colombia\b/gi, 'Team Colombia')
+              .replace(/Kolumbien-Team/gi, 'Team Colombia');
+          }
           if (translated && translated !== phrase) {
             dict[phrase] = translated;
           }

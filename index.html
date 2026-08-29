@@ -363,14 +363,14 @@
     
     <!-- Top Header Navigation -->
     <header class="app-header">
-      <div class="logo-area">
+      <div class="logo-area notranslate" translate="no">
         <span class="flag-stripe yellow"></span>
         <span class="flag-stripe blue"></span>
         <span class="flag-stripe red"></span>
         <h1>TEAM COLOMBIA • FGC 2026</h1>
       </div>
       
-      <nav class="nav-area">
+      <nav class="nav-area" id="headerNavArea" style="display: none;">
         <a href="index.html" class="nav-link active">Portal</a>
         <a href="simulacion.html" class="nav-link auth-required-link">2D Simulator</a>
         <a href="estrategias.html" class="nav-link auth-required-link">Tactical Playbook</a>
@@ -887,7 +887,9 @@
       }
 
       AuthService.subscribe((user, profile) => {
+        const headerNavArea = document.getElementById('headerNavArea');
         if (profile) {
+          if (headerNavArea) headerNavArea.style.display = 'flex';
           const cInfo = getCountryInfo(profile.country_code);
           const avObj = (typeof AVATAR_PRESETS !== 'undefined') ? (AVATAR_PRESETS.find(a => a.id === profile.avatar_url) || AVATAR_PRESETS[0]) : { icon: '🤖', bg: '#3b82f6' };
           const roleLabel = profile.role === 'mentor' ? '🛡️ Mentor' : '🎓 Student';
@@ -917,6 +919,7 @@
             });
           }
         } else {
+          if (headerNavArea) headerNavArea.style.display = 'none';
           if (userBanner) userBanner.style.display = 'none';
           if (headerAuthArea) {
             headerAuthArea.innerHTML = `

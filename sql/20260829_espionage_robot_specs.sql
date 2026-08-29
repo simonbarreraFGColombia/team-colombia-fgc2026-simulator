@@ -1,17 +1,88 @@
 -- ====================================================================
--- FGC 2026 GAME SIMULATOR - ESPIONAGE TELEMETRY & ROBOT SPECS SCHEMA
+-- FGC 2026 GAME SIMULATOR - COMPLETE SELF-CONTAINED DATABASE SCHEMA
 -- File: 20260829_espionage_robot_specs.sql
--- Description: Deep engineering specifications, robot dimension bounding boxes,
--- expansion mechanics, cycle analytics, and stealth espionage metrics.
+-- Description: Creates all required tables (profiles, robot_configs,
+-- match_telemetry, user_strategies, robot_presets), RLS policies,
+-- and espionage analytics fields idempotently.
 -- ====================================================================
 
--- 1. TABLA: ROBOT_CONFIGS (Especificaciones de Ingeniería y Geometría 3D/2D)
+-- 0. EXTENSIONS
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- 1. TABLA: PROFILES (Perfiles de Usuarios y Competidores)
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  username TEXT,
+  email TEXT,
+  team_name TEXT NOT NULL DEFAULT 'Team Colombia',
+  country_code CHAR(2) NOT NULL DEFAULT 'CO',
+  team_number TEXT,
+  role TEXT NOT NULL DEFAULT 'student' CHECK (role IN ('student', 'mentor', 'driver', 'engineer', 'admin')),
+  is_locked BOOLEAN NOT NULL DEFAULT FALSE,
+  lock_reason TEXT,
+  avatar_url TEXT DEFAULT 'pilot',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 2. TABLA: MATCH_TELEMETRY (Telemetría de Partidos y Espionaje Táctico)
+CREATE TABLE IF NOT EXISTS public.match_telemetry (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  username TEXT DEFAULT 'pilot',
+  country_code CHAR(2) NOT NULL DEFAULT 'CO',
+  team_name TEXT NOT NULL DEFAULT 'Team Colombia',
+  alliance_color TEXT NOT NULL DEFAULT 'red' CHECK (alliance_color IN ('red', 'blue')),
+  game_mode INT NOT NULL DEFAULT 1,
+  role TEXT DEFAULT 'student',
+  avatar_url TEXT DEFAULT 'pilot',
+  final_score INT NOT NULL DEFAULT 0,
+  balls_scored INT NOT NULL DEFAULT 0,
+  accuracy_pct NUMERIC(5,2) DEFAULT 0.00,
+  climb_level INT DEFAULT 0,
+  buddy_climbed BOOLEAN DEFAULT FALSE,
+  match_duration_sec INT DEFAULT 150,
+  
+  -- Campos de Espionaje e Inteligencia
+  shots_fire_shield_pct NUMERIC(5,2) DEFAULT 0.00,
+  shots_suppression_pct NUMERIC(5,2) DEFAULT 100.00,
+  first_zone_visited TEXT DEFAULT 'Zone 2',
+  zones_heatmap JSONB DEFAULT '{"zone1": 25, "zone2": 45, "zone3": 15, "red_substation": 10, "neutral_center": 5}'::jsonb,
+  cycles_count INT DEFAULT 4,
+  avg_balls_per_cycle NUMERIC(4,2) DEFAULT 3.50,
+  avg_cycle_duration_sec NUMERIC(5,2) DEFAULT 18.00,
+  storage_fill_time_recorded_sec NUMERIC(5,2) DEFAULT 12.00,
+  climb_dock_time_left_sec INT DEFAULT 20,
+  full_cycle_timeline JSONB DEFAULT '[]'::jsonb,
+  robot_specs_snapshot JSONB DEFAULT '{}'::jsonb,
+
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Asegurar columnas si la tabla ya existía previamente
+ALTER TABLE public.match_telemetry ADD COLUMN IF NOT EXISTS username TEXT DEFAULT 'pilot';
+ALTER TABLE public.match_telemetry ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'student';
+ALTER TABLE public.match_telemetry ADD COLUMN IF NOT EXISTS avatar_url TEXT DEFAULT 'pilot';
+ALTER TABLE public.match_telemetry ADD COLUMN IF NOT EXISTS shots_fire_shield_pct NUMERIC(5,2) DEFAULT 0.00;
+ALTER TABLE public.match_telemetry ADD COLUMN IF NOT EXISTS shots_suppression_pct NUMERIC(5,2) DEFAULT 100.00;
+ALTER TABLE public.match_telemetry ADD COLUMN IF NOT EXISTS first_zone_visited TEXT DEFAULT 'Zone 2';
+ALTER TABLE public.match_telemetry ADD COLUMN IF NOT EXISTS zones_heatmap JSONB DEFAULT '{"zone1": 25, "zone2": 45, "zone3": 15, "red_substation": 10, "neutral_center": 5}'::jsonb;
+ALTER TABLE public.match_telemetry ADD COLUMN IF NOT EXISTS cycles_count INT DEFAULT 4;
+ALTER TABLE public.match_telemetry ADD COLUMN IF NOT EXISTS avg_balls_per_cycle NUMERIC(4,2) DEFAULT 3.50;
+ALTER TABLE public.match_telemetry ADD COLUMN IF NOT EXISTS avg_cycle_duration_sec NUMERIC(5,2) DEFAULT 18.00;
+ALTER TABLE public.match_telemetry ADD COLUMN IF NOT EXISTS storage_fill_time_recorded_sec NUMERIC(5,2) DEFAULT 12.00;
+ALTER TABLE public.match_telemetry ADD COLUMN IF NOT EXISTS climb_dock_time_left_sec INT DEFAULT 20;
+ALTER TABLE public.match_telemetry ADD COLUMN IF NOT EXISTS full_cycle_timeline JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.match_telemetry ADD COLUMN IF NOT EXISTS robot_specs_snapshot JSONB DEFAULT '{}'::jsonb;
+
+-- 3. TABLA: ROBOT_CONFIGS (Especificaciones de Ingeniería y Geometría 3D/2D)
 CREATE TABLE IF NOT EXISTS public.robot_configs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
-  username TEXT NOT NULL,
-  team_name TEXT NOT NULL,
-  country_code CHAR(2) NOT NULL,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  username TEXT NOT NULL DEFAULT 'pilot',
+  team_name TEXT NOT NULL DEFAULT 'Team Colombia',
+  country_code CHAR(2) NOT NULL DEFAULT 'CO',
   role TEXT NOT NULL DEFAULT 'student',
   avatar_url TEXT DEFAULT 'pilot',
   
@@ -62,31 +133,59 @@ CREATE TABLE IF NOT EXISTS public.robot_configs (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 2. EXTENSIONES A MATCH_TELEMETRY (Métricas de Espionaje Táctico)
-ALTER TABLE public.match_telemetry ADD COLUMN IF NOT EXISTS shots_fire_shield_pct NUMERIC(5,2) DEFAULT 0.00;
-ALTER TABLE public.match_telemetry ADD COLUMN IF NOT EXISTS shots_suppression_pct NUMERIC(5,2) DEFAULT 100.00;
-ALTER TABLE public.match_telemetry ADD COLUMN IF NOT EXISTS first_zone_visited TEXT DEFAULT 'Zone 2';
-ALTER TABLE public.match_telemetry ADD COLUMN IF NOT EXISTS zones_heatmap JSONB DEFAULT '{"zone1": 25, "zone2": 45, "zone3": 15, "red_substation": 10, "neutral_center": 5}'::jsonb;
-ALTER TABLE public.match_telemetry ADD COLUMN IF NOT EXISTS cycles_count INT DEFAULT 4;
-ALTER TABLE public.match_telemetry ADD COLUMN IF NOT EXISTS avg_balls_per_cycle NUMERIC(4,2) DEFAULT 3.50;
-ALTER TABLE public.match_telemetry ADD COLUMN IF NOT EXISTS avg_cycle_duration_sec NUMERIC(5,2) DEFAULT 18.00;
-ALTER TABLE public.match_telemetry ADD COLUMN IF NOT EXISTS storage_fill_time_recorded_sec NUMERIC(5,2) DEFAULT 12.00;
-ALTER TABLE public.match_telemetry ADD COLUMN IF NOT EXISTS climb_dock_time_left_sec INT DEFAULT 20;
-ALTER TABLE public.match_telemetry ADD COLUMN IF NOT EXISTS full_cycle_timeline JSONB DEFAULT '[]'::jsonb;
-ALTER TABLE public.match_telemetry ADD COLUMN IF NOT EXISTS robot_specs_snapshot JSONB DEFAULT '{}'::jsonb;
+-- 4. TABLA: USER_STRATEGIES (Playbook Táctico)
+CREATE TABLE IF NOT EXISTS public.user_strategies (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  country_code CHAR(2) NOT NULL DEFAULT 'CO',
+  team_name TEXT NOT NULL DEFAULT 'Team Colombia',
+  strategy_name TEXT NOT NULL,
+  description TEXT,
+  roles_config JSONB NOT NULL,
+  hp_strategy TEXT NOT NULL DEFAULT 'balanced',
+  projected_points JSONB NOT NULL,
+  is_favorite BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
--- 3. INDICES
-CREATE INDEX IF NOT EXISTS idx_robot_configs_user_id ON public.robot_configs(user_id);
+-- 5. ÍNDICES DE RENDIMIENTO
+CREATE INDEX IF NOT EXISTS idx_robot_configs_user ON public.robot_configs(user_id);
 CREATE INDEX IF NOT EXISTS idx_robot_configs_country ON public.robot_configs(country_code);
 CREATE INDEX IF NOT EXISTS idx_match_telemetry_created ON public.match_telemetry(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_match_telemetry_country ON public.match_telemetry(country_code);
+CREATE INDEX IF NOT EXISTS idx_profiles_country ON public.profiles(country_code);
 
--- 4. ROW LEVEL SECURITY (RLS)
+-- 6. HABILITAR ROW LEVEL SECURITY (RLS)
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.match_telemetry ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.robot_configs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_strategies ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Public Read Robot Configs" ON public.robot_configs
-  FOR SELECT USING (true);
+-- 7. POLÍTICAS RLS SEGURAS E IDEMPOTENTES
+DROP POLICY IF EXISTS "Public Read Profiles" ON public.profiles;
+CREATE POLICY "Public Read Profiles" ON public.profiles FOR SELECT USING (true);
 
-CREATE POLICY "Users Upsert Own Robot Config" ON public.robot_configs
-  FOR ALL USING (auth.uid() = user_id OR auth.uid() IS NULL)
-  WITH CHECK (auth.uid() = user_id OR auth.uid() IS NULL);
+DROP POLICY IF EXISTS "Public Insert Profiles" ON public.profiles;
+CREATE POLICY "Public Insert Profiles" ON public.profiles FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public Update Profiles" ON public.profiles;
+CREATE POLICY "Public Update Profiles" ON public.profiles FOR UPDATE USING (true);
+
+DROP POLICY IF EXISTS "Public Read Telemetry" ON public.match_telemetry;
+CREATE POLICY "Public Read Telemetry" ON public.match_telemetry FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public Insert Telemetry" ON public.match_telemetry;
+CREATE POLICY "Public Insert Telemetry" ON public.match_telemetry FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public Read Robot Configs" ON public.robot_configs;
+CREATE POLICY "Public Read Robot Configs" ON public.robot_configs FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public Upsert Robot Configs" ON public.robot_configs;
+CREATE POLICY "Public Upsert Robot Configs" ON public.robot_configs FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public Read Strategies" ON public.user_strategies;
+CREATE POLICY "Public Read Strategies" ON public.user_strategies FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Public Upsert Strategies" ON public.user_strategies;
+CREATE POLICY "Public Upsert Strategies" ON public.user_strategies FOR ALL USING (true) WITH CHECK (true);
