@@ -1,4 +1,9 @@
 {
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/adminmastersecrete", "destination": "/adminmastersecrete.html" },
+    { "source": "/adminmastersecrete/", "destination": "/adminmastersecrete.html" }
+  ],
   "headers": [
     {
       "source": "/(.*)",

@@ -19,30 +19,14 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   
-  <!-- Global Error Trap (Diagnostic) -->
+  <!-- Safe Error Handling -->
   <script>
-    window.__fgcErrors = [];
     window.onerror = function(msg, src, line, col, err) {
-      window.__fgcErrors.push({msg, src, line, col});
-      var d = document.getElementById('fgcErrorBanner');
-      if (!d) {
-        d = document.createElement('div');
-        d.id = 'fgcErrorBanner';
-        d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999999;background:#dc2626;color:#fff;padding:12px 20px;font-family:monospace;font-size:13px;max-height:200px;overflow-y:auto;';
-        document.body ? document.body.prepend(d) : document.documentElement.appendChild(d);
-      }
-      d.innerHTML += '<div><b>JS Error:</b> ' + msg + ' <br><b>File:</b> ' + src + ':' + line + ':' + col + '</div><hr>';
+      console.warn('[FGC Error Logger]', msg, src, line, col);
       return false;
     };
     window.addEventListener('unhandledrejection', function(e) {
-      var d = document.getElementById('fgcErrorBanner');
-      if (!d) {
-        d = document.createElement('div');
-        d.id = 'fgcErrorBanner';
-        d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999999;background:#dc2626;color:#fff;padding:12px 20px;font-family:monospace;font-size:13px;max-height:200px;overflow-y:auto;';
-        document.body ? document.body.prepend(d) : document.documentElement.appendChild(d);
-      }
-      d.innerHTML += '<div><b>Promise Error:</b> ' + (e.reason ? (e.reason.message || e.reason) : 'unknown') + '</div><hr>';
+      console.warn('[FGC Unhandled Rejection]', e.reason);
     });
   </script>
 
@@ -440,7 +424,7 @@
 
         <div class="hero-cta-group">
           <a href="simulacion.html" class="btn-action-hero primary auth-required-link">
-            <svg class="icon-svg" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h4m-2-2v4m10-2h.01m-3 0h.01"></polygon></svg>
+            <svg class="icon-svg" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h4m-2-2v4m10-2h.01m-3 0h.01"></path></svg>
             <span>Launch 2D Simulator</span>
           </a>
           <a href="estrategias.html" class="btn-action-hero secondary auth-required-link">
@@ -492,7 +476,7 @@
       <div class="module-box">
         <div>
           <div class="module-icon-svg">
-            <svg class="icon-svg" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h4m-2-2v4m10-2h.01m-3 0h.01"></polygon></svg>
+            <svg class="icon-svg" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h4m-2-2v4m10-2h.01m-3 0h.01"></path></svg>
           </div>
           <h3>Live 2D Match Simulator</h3>
           <p>

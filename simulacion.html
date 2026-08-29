@@ -87,60 +87,202 @@
             </div>
           </div>
 
-          <!-- Robot Specs -->
+          <!-- Robot Engineering Specs & Dimensions -->
           <div class="config-card">
             <div class="config-card-header">
-              <span class="config-icon">🤖</span>
-              <h3>SPECS DE MI ROBOT</h3>
+              <span class="config-icon">📐</span>
+              <h3>DIMENSIONES & VOLUMEN DEL ROBOT</h3>
+            </div>
+            
+            <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 10px; margin-bottom: 12px;">
+              <div style="font-size: 0.75rem; font-weight: 700; color: #ffd700; margin-bottom: 6px;">📦 Dimensiones Iniciales (cm)</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
+                <div>
+                  <label style="font-size: 0.68rem; color: #94a3b8;">Largo (L)</label>
+                  <input type="number" id="initDimL" class="form-input" style="padding: 4px 6px; font-size: 0.78rem;" value="45" min="20" max="90">
+                </div>
+                <div>
+                  <label style="font-size: 0.68rem; color: #94a3b8;">Ancho (W)</label>
+                  <input type="number" id="initDimW" class="form-input" style="padding: 4px 6px; font-size: 0.78rem;" value="45" min="20" max="90">
+                </div>
+                <div>
+                  <label style="font-size: 0.68rem; color: #94a3b8;">Alto (H)</label>
+                  <input type="number" id="initDimH" class="form-input" style="padding: 4px 6px; font-size: 0.78rem;" value="40" min="20" max="90">
+                </div>
+              </div>
+              <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 4px; display: flex; justify-content: space-between;">
+                <span>Volumen Inicial:</span>
+                <strong id="initVolDisplay" style="color: #38bdf8;">81,000 cm³</strong>
+              </div>
+            </div>
+
+            <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 10px; margin-bottom: 12px;">
+              <div style="font-size: 0.75rem; font-weight: 700; color: #f59e0b; margin-bottom: 6px;">🚀 Dimensiones Finales Expandidas (cm)</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
+                <div>
+                  <label style="font-size: 0.68rem; color: #94a3b8;">Largo (L)</label>
+                  <input type="number" id="finalDimL" class="form-input" style="padding: 4px 6px; font-size: 0.78rem;" value="65" min="20" max="120">
+                </div>
+                <div>
+                  <label style="font-size: 0.68rem; color: #94a3b8;">Ancho (W)</label>
+                  <input type="number" id="finalDimW" class="form-input" style="padding: 4px 6px; font-size: 0.78rem;" value="50" min="20" max="120">
+                </div>
+                <div>
+                  <label style="font-size: 0.68rem; color: #94a3b8;">Alto (H)</label>
+                  <input type="number" id="finalDimH" class="form-input" style="padding: 4px 6px; font-size: 0.78rem;" value="70" min="20" max="140">
+                </div>
+              </div>
+              <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 4px; display: flex; justify-content: space-between;">
+                <span>Volumen Expandido:</span>
+                <strong id="finalVolDisplay" style="color: #f59e0b;">227,500 cm³</strong>
+              </div>
+            </div>
+
+            <!-- Direction of expansion -->
+            <div class="config-row" style="flex-direction: column; align-items: flex-start; gap: 6px;">
+              <label style="font-size: 0.75rem;">Hacia qué dirección se expande:</label>
+              <div style="display: flex; gap: 4px; flex-wrap: wrap;" id="expansionDirGroup">
+                <button type="button" class="toggle-btn active" data-dir="left">⬅️ Izq</button>
+                <button type="button" class="toggle-btn active" data-dir="right">➡️ Der</button>
+                <button type="button" class="toggle-btn active" data-dir="up">⬆️ Arriba</button>
+                <button type="button" class="toggle-btn" data-dir="front">🔼 Adelante</button>
+                <button type="button" class="toggle-btn" data-dir="back">🔽 Atrás</button>
+              </div>
+            </div>
+
+            <div class="spec-row" style="margin-top: 8px;">
+              <div class="spec-info">
+                <label>Tiempo de Expansión</label>
+                <span class="spec-unit" id="expansionTimeVal">2.5 s</span>
+              </div>
+              <input type="range" class="spec-slider" id="expansionTime" min="0.5" max="8.0" step="0.5" value="2.5">
+            </div>
+          </div>
+
+          <!-- Storage / Hopper Specs -->
+          <div class="config-card">
+            <div class="config-card-header">
+              <span class="config-icon">📦</span>
+              <h3>TOLVA & ALMACENAMIENTO</h3>
+            </div>
+            
+            <div class="spec-row">
+              <div class="spec-info">
+                <label>Capacidad Sin Expansión</label>
+                <span class="spec-unit" id="capNonExpVal">6 pelotas</span>
+              </div>
+              <input type="range" class="spec-slider" id="capNonExp" min="1" max="25" step="1" value="6">
+            </div>
+
+            <div class="spec-row">
+              <div class="spec-info">
+                <label>Capacidad Con Expansión (Linear Motion)</label>
+                <span class="spec-unit" id="capacityVal">14 pelotas</span>
+              </div>
+              <input type="range" class="spec-slider" id="capacity" min="3" max="50" step="1" value="14">
+            </div>
+
+            <div class="spec-row">
+              <div class="spec-info">
+                <label>Tiempo Estimado para Llenar Almacenamiento</label>
+                <span class="spec-unit" id="storageFillTimeVal">12.5 s</span>
+              </div>
+              <input type="range" class="spec-slider" id="storageFillTime" min="3.0" max="45.0" step="0.5" value="12.5">
+            </div>
+          </div>
+
+          <!-- Kinematics & Speeds -->
+          <div class="config-card">
+            <div class="config-card-header">
+              <span class="config-icon">⚡</span>
+              <h3>CINEMÁTICA & VELOCIDADES</h3>
             </div>
             <div class="spec-row">
               <div class="spec-info">
                 <label>Velocidad de Movimiento</label>
-                <span class="spec-unit" id="moveSpeedVal">1.5 m/s</span>
+                <span class="spec-unit" id="moveSpeedVal">2.8 m/s</span>
               </div>
-              <input type="range" class="spec-slider" id="moveSpeed" min="0.5" max="3.0" step="0.1" value="1.5">
+              <input type="range" class="spec-slider" id="moveSpeed" min="0.5" max="4.5" step="0.1" value="2.8">
             </div>
             <div class="spec-row">
               <div class="spec-info">
-                <label>Velocidad de Recogida</label>
-                <span class="spec-unit" id="pickupSpeedVal">2.0 pelotas/s</span>
+                <label>Velocidad de Recogida (Intake)</label>
+                <span class="spec-unit" id="pickupSpeedVal">2.5 pelotas/s</span>
               </div>
-              <input type="range" class="spec-slider" id="pickupSpeed" min="0.5" max="5.0" step="0.5" value="2.0">
+              <input type="range" class="spec-slider" id="pickupSpeed" min="0.5" max="6.0" step="0.5" value="2.5">
             </div>
             <div class="spec-row">
               <div class="spec-info">
-                <label>Velocidad de Disparo</label>
-                <span class="spec-unit" id="shotSpeedVal">3.0 pelotas/s</span>
+                <label>Velocidad de Disparo (Shooter)</label>
+                <span class="spec-unit" id="shotSpeedVal">3.2 pelotas/s</span>
               </div>
-              <input type="range" class="spec-slider" id="shotSpeed" min="1.0" max="8.0" step="0.5" value="3.0">
+              <input type="range" class="spec-slider" id="shotSpeed" min="1.0" max="8.0" step="0.2" value="3.2">
             </div>
             <div class="spec-row">
               <div class="spec-info">
-                <label>Capacidad de Almacenamiento</label>
-                <span class="spec-unit" id="capacityVal">12 pelotas</span>
+                <label>Precisión Mecánica del Robot</label>
+                <span class="spec-unit" id="accuracyVal">92%</span>
               </div>
-              <input type="range" class="spec-slider" id="capacity" min="3" max="100" step="1" value="12">
+              <input type="range" class="spec-slider" id="accuracy" min="50" max="100" step="2" value="92">
             </div>
-            <div class="spec-row">
-              <div class="spec-info">
-                <label>Precisión del Robot</label>
-                <span class="spec-unit" id="accuracyVal">80%</span>
+
+            <!-- Strategy Shooting Target -->
+            <div class="config-row" style="margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.06); padding-top: 8px;">
+              <label>Objetivo Principal</label>
+              <div class="toggle-group" id="strategyTargetToggle">
+                <button type="button" class="toggle-btn active" data-value="shooter">🎯 Shooter (Supresión)</button>
+                <button type="button" class="toggle-btn" data-value="feeder_human_player">🔥 Feeder (Fire Shield)</button>
               </div>
-              <input type="range" class="spec-slider" id="accuracy" min="20" max="100" step="5" value="80">
             </div>
-            <div class="spec-row">
+          </div>
+
+          <!-- Climber & Brace Specs -->
+          <div class="config-card">
+            <div class="config-card-header">
+              <span class="config-icon">🧗</span>
+              <h3>SISTEMA DE ESCALADA & BRACE</h3>
+            </div>
+            
+            <div class="config-row" style="flex-direction: column; align-items: flex-start; gap: 6px;">
+              <label>Tipo de Mecanismo de Escalada:</label>
+              <div class="toggle-group" id="climberTypeToggle" style="width: 100%;">
+                <button type="button" class="toggle-btn active" data-value="solo" style="flex: 1; font-size: 0.72rem;">🧗 Solo Climber</button>
+                <button type="button" class="toggle-btn" data-value="buddy_carrier" style="flex: 1; font-size: 0.72rem;">🤝 Buddy Carrier</button>
+                <button type="button" class="toggle-btn" data-value="buddy_piggyback" style="flex: 1; font-size: 0.72rem;">🪝 Buddy Enganche</button>
+              </div>
+            </div>
+
+            <div class="spec-row" style="margin-top: 8px;">
               <div class="spec-info">
                 <label>Velocidad de Escalada</label>
-                <span class="spec-unit" id="climbSpeedVal">0.5 m/s</span>
+                <span class="spec-unit" id="climbSpeedVal">0.8 m/s</span>
               </div>
-              <input type="range" class="spec-slider" id="climbSpeed" min="0.1" max="1.5" step="0.1" value="0.5">
+              <input type="range" class="spec-slider" id="climbSpeed" min="0.1" max="2.0" step="0.1" value="0.8">
             </div>
+            
             <div class="spec-row">
               <div class="spec-info">
-                <label>Tiempo de Anclaje de Escalada</label>
-                <span class="spec-unit" id="climbAnchorTimeVal">2.0 s</span>
+                <label>Tiempo de Anclaje en Escalado</label>
+                <span class="spec-unit" id="climbAnchorTimeVal">2.5 s</span>
               </div>
-              <input type="range" class="spec-slider" id="climbAnchorTime" min="1.0" max="10.0" step="0.5" value="2.0">
+              <input type="range" class="spec-slider" id="climbAnchorTime" min="0.5" max="8.0" step="0.5" value="2.5">
+            </div>
+
+            <div class="config-row">
+              <label>Zona Máxima Objetivo</label>
+              <div class="toggle-group" id="targetBraceZoneToggle">
+                <button type="button" class="toggle-btn" data-value="zone1">Zona 1 (Baja)</button>
+                <button type="button" class="toggle-btn" data-value="zone2">Zona 2 (Media)</button>
+                <button type="button" class="toggle-btn active" data-value="zone3">Zona 3 (Alta)</button>
+              </div>
+            </div>
+
+            <div class="spec-row">
+              <div class="spec-info">
+                <label>Tiempo Restante para Ir al Brace</label>
+                <span class="spec-unit" id="climbStartTimeVal">25 s restantes</span>
+              </div>
+              <input type="range" class="spec-slider" id="climbStartTime" min="5" max="60" step="5" value="25">
             </div>
 
             <!-- Cloud Presets Toolbar -->
@@ -149,32 +291,8 @@
                 <option value="">📋 Cargar Preset en Nube...</option>
               </select>
               <button id="savePresetBtn" type="button" style="background: rgba(255,215,0,0.15); border: 1px solid rgba(255,215,0,0.4); color: #ffd700; font-size: 0.75rem; padding: 6px 10px; border-radius: 6px; cursor: pointer;">
-                💾 Guardar
+                💾 Guardar Specs
               </button>
-            </div>
-          </div>
-
-          <!-- Linear Motion Configuration -->
-          <div class="config-card">
-            <div class="config-card-header">
-              <span class="config-icon">📦</span>
-              <h3>ROBOTS CON LINEAR MOTION</h3>
-            </div>
-            <div class="config-row">
-              <label>Distribución</label>
-              <div class="toggle-group" id="linearRobotsToggle">
-                <button class="toggle-btn" data-value="0">0 (Ninguno)</button>
-                <button class="toggle-btn active" data-value="1">1 (Solo Tú)</button>
-                <button class="toggle-btn" data-value="3">3 (Alianza)</button>
-                <button class="toggle-btn" data-value="6">6 (Todos)</button>
-              </div>
-            </div>
-            <div class="spec-row" style="margin-top: -2px;">
-              <div class="spec-info">
-                <label>Cantidad de Robots con Almacenamiento Expandible</label>
-                <span class="spec-unit" id="linearRobotsCountVal">1 robot</span>
-              </div>
-              <input type="range" class="spec-slider" id="linearRobotsCount" min="0" max="6" step="1" value="1">
             </div>
           </div>
 

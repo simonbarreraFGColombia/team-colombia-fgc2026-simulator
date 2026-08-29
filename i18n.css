@@ -1,18 +1,20 @@
-/* ── FGC 2026 GLOBAL I18N LANGUAGE SELECTOR (50+ LANGUAGES) ────────────── */
+/* ── FGC 2026 GLOBAL I18N LANGUAGE SELECTOR (80+ LANGUAGES) ────────────── */
 
-.lang-picker-container {
-  position: relative;
-  display: inline-block;
-  font-family: 'Poppins', 'Montserrat', sans-serif;
-  z-index: 1000;
+.lang-picker-container,
+.lang-picker-wrapper {
+  position: relative !important;
+  display: inline-block !important;
+  font-family: var(--font-display, 'Inter', sans-serif);
+  z-index: 10000;
+  margin-left: 8px;
 }
 
 .lang-picker-btn {
-  display: flex;
+  display: inline-flex !important;
   align-items: center;
   gap: 8px;
   background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 215, 0, 0.3);
+  border: 1px solid rgba(255, 215, 0, 0.35);
   border-radius: 20px;
   padding: 6px 14px;
   color: #fff;
@@ -20,116 +22,123 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.25s ease;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
+  user-select: none;
 }
 
 .lang-picker-btn:hover {
-  background: rgba(255, 215, 0, 0.15);
+  background: rgba(255, 215, 0, 0.18);
   border-color: #ffd700;
-  box-shadow: 0 0 12px rgba(255, 215, 0, 0.3);
+  box-shadow: 0 0 14px rgba(255, 215, 0, 0.35);
+  transform: translateY(-1px);
 }
 
-.lang-picker-btn .lang-flag {
-  font-size: 1.1rem;
+.lang-picker-btn #currentLangFlag {
+  font-size: 1.15rem;
   line-height: 1;
 }
 
-.lang-picker-btn .lang-arrow {
-  font-size: 0.65rem;
-  color: #ffd700;
-  transition: transform 0.2s ease;
+.lang-picker-dropdown,
+.lang-dropdown-panel {
+  position: absolute !important;
+  top: calc(100% + 10px) !important;
+  right: 0 !important;
+  width: 310px !important;
+  max-height: 400px !important;
+  background: rgba(15, 18, 30, 0.98) !important;
+  border: 1px solid rgba(255, 215, 0, 0.35) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 25px rgba(255, 215, 0, 0.12) !important;
+  backdrop-filter: blur(20px) !important;
+  display: none !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  z-index: 999999 !important;
+  animation: fgcDropFade 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.lang-picker-dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  width: 290px;
-  max-height: 380px;
-  background: #0f121e;
-  border: 1px solid rgba(255, 215, 0, 0.35);
-  border-radius: 14px;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 215, 0, 0.15);
-  backdrop-filter: blur(16px);
-  display: none;
-  flex-direction: column;
-  overflow: hidden;
-  z-index: 100000 !important;
-  animation: fadeInDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+.lang-picker-dropdown.active,
+.lang-dropdown-panel.active {
+  display: flex !important;
 }
 
-.lang-picker-dropdown.active {
-  display: flex;
-}
-
-@keyframes fadeInDown {
+@keyframes fgcDropFade {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(-8px) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
-.lang-search-box {
-  padding: 10px;
-  background: rgba(0, 0, 0, 0.4);
+.lang-search-box,
+.lang-dropdown-header {
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.5);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.lang-search-input {
+.lang-search-input,
+.lang-search-box input {
   width: 100%;
   padding: 8px 12px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 8px;
   color: #fff;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-family: inherit;
   outline: none;
   box-sizing: border-box;
+  transition: border-color 0.2s ease;
 }
 
-.lang-search-input:focus {
+.lang-search-input:focus,
+.lang-search-box input:focus {
   border-color: #ffd700;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
 }
 
-.lang-list {
+.lang-list,
+.lang-scroll-list {
   flex: 1;
-  overflow-y: auto;
+  overflow-y: auto !important;
   padding: 6px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 215, 0, 0.3) transparent;
 }
 
 .lang-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
   padding: 8px 12px;
   border-radius: 8px;
   background: transparent;
   border: none;
   color: #e2e8f0;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-family: inherit;
   cursor: pointer;
   text-align: left;
   transition: all 0.15s ease;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .lang-item:hover {
   background: rgba(255, 215, 0, 0.12);
   color: #ffd700;
+  transform: translateX(3px);
 }
 
 .lang-item.selected {
-  background: linear-gradient(90deg, rgba(255, 215, 0, 0.2), rgba(232, 48, 72, 0.15));
+  background: linear-gradient(90deg, rgba(255, 215, 0, 0.22), rgba(232, 48, 72, 0.12));
   color: #ffd700;
   font-weight: 700;
   border-left: 3px solid #ffd700;
@@ -139,19 +148,28 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  overflow: hidden;
 }
 
 .lang-item-name {
-  font-size: 0.8rem;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .lang-item-code {
   font-size: 0.7rem;
   color: #94a3b8;
   text-transform: uppercase;
+  font-weight: 700;
+  font-family: var(--font-display, monospace);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
 }
 
-/* Hide default Google Translate bar and branding to keep pure Cyber/FGC look */
+/* Hide default Google Translate bar and branding */
 .goog-te-banner-frame.skiptranslate,
 .goog-te-banner-frame,
 #goog-gt-tt,
@@ -165,10 +183,6 @@ body {
 }
 
 .goog-tooltip {
-  display: none !important;
-}
-
-.goog-tooltip:hover {
   display: none !important;
 }
 

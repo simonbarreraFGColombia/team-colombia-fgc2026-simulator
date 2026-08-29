@@ -556,21 +556,21 @@ const I18nManager = {
 
     const container = document.createElement('div');
     container.id = 'fgcLangPicker';
-    container.className = 'lang-picker-wrapper';
+    container.className = 'lang-picker-container';
     container.innerHTML = `
       <button type="button" id="langPickerBtn" class="lang-picker-btn" aria-label="Select Language">
         <span id="currentLangFlag" style="font-size: 1.15rem;">${current.flag}</span>
-        <span id="currentLangName" style="font-family: var(--font-display); font-weight: 700; font-size: 0.72rem;">${current.code.toUpperCase()}</span>
+        <span id="currentLangName" style="font-family: var(--font-display, Inter, sans-serif); font-weight: 700; font-size: 0.72rem;">${current.code.toUpperCase()}</span>
         <svg style="width: 10px; height: 10px; fill: currentColor; opacity: 0.7;" viewBox="0 0 24 24">
           <path d="M7 10l5 5 5-5z"/>
         </svg>
       </button>
 
-      <div id="langPickerDropdown" class="lang-dropdown-panel">
-        <div class="lang-dropdown-header">
-          <input type="text" id="langSearchInput" class="lang-search-box" placeholder="Search (${FGC_LANGUAGES.length} languages)...">
+      <div id="langPickerDropdown" class="lang-picker-dropdown">
+        <div class="lang-search-box">
+          <input type="text" id="langSearchInput" class="lang-search-input" placeholder="Search (${FGC_LANGUAGES.length} languages)...">
         </div>
-        <div id="langList" class="lang-scroll-list">
+        <div id="langList" class="lang-list">
           ${FGC_LANGUAGES.map(l => `
             <button type="button" class="lang-item ${l.code === this.currentLang ? 'selected' : ''}" data-code="${l.code}">
               <div class="lang-item-left">

@@ -2906,10 +2906,13 @@ function gameLoop(timestamp) {
     
     robots.forEach(r => {
       if (r.state === 'climbing') {
+        if (r.isPlayer) ESPIONAGE_TRACKER.recordClimbInitiation();
         updateClimbingRobot(r, dt);
       } else {
         if (r.isPlayer) {
           updatePlayerRobot(r, dt);
+          ESPIONAGE_TRACKER.trackPosition(r, dt);
+          ESPIONAGE_TRACKER.checkCycleTransition(r.inv);
         } else {
           updateBotAI(r, dt);
         }
@@ -3207,6 +3210,97 @@ function isRobotABuddy(key) {
   return false;
 }
 
+// ── 13. ESPIONAGE IN-MATCH TELEMETRY TRACKER ──────────────────────
+const ESPIONAGE_TRACKER = {
+  firstZone: null,
+  zoneTime: { zone1: 0, zone2: 0, zone3: 0, red_sub: 0, blue_sub: 0, ramp: 0, neutral_center: 0 },
+  fireShieldShots: 0,
+  suppressionShots: 0,
+  cycles: [],
+  currentCycle: {
+    startTime: 150,
+    ballsCollected: 0,
+    ballsScored: 0
+  },
+  storage100pctTime: null,
+  climbDockTimeLeft: 0,
+
+  reset() {
+    this.firstZone = null;
+    this.zoneTime = { zone1: 0, zone2: 0, zone3: 0, red_sub: 0, blue_sub: 0, ramp: 0, neutral_center: 0 };
+    this.fireShieldShots = 0;
+    this.suppressionShots = 0;
+    this.cycles = [];
+    this.currentCycle = { startTime: 150, ballsCollected: 0, ballsScored: 0 };
+    this.storage100pctTime = null;
+    this.climbDockTimeLeft = 0;
+  },
+
+  trackPosition(robot, dt) {
+    if (!robot) return;
+    const x = robot.x;
+    const y = robot.y;
+    let zoneKey = 'neutral_center';
+    if (y < 2.5) {
+      if (x < 2.5) zoneKey = 'zone1';
+      else if (x < 4.5) zoneKey = 'zone2';
+      else zoneKey = 'zone3';
+    } else if (y > 5.5) {
+      if (x < 3.0) zoneKey = 'red_sub';
+      else if (x > 4.0) zoneKey = 'blue_sub';
+      else zoneKey = 'ramp';
+    } else {
+      zoneKey = 'neutral_center';
+    }
+
+    if (!this.firstZone && (robot.vx !== 0 || robot.vy !== 0 || robot.inv > 0)) {
+      this.firstZone = zoneKey.toUpperCase().replace('_', ' ');
+    }
+    this.zoneTime[zoneKey] = (this.zoneTime[zoneKey] || 0) + dt;
+  },
+
+  recordPickup(count = 1, currentInv, maxCap) {
+    this.currentCycle.ballsCollected += count;
+    if (currentInv >= maxCap && this.storage100pctTime === null) {
+      this.storage100pctTime = +(150 - matchTime).toFixed(1);
+    }
+  },
+
+  recordShot(target = 'suppression', isHit = true) {
+    if (target === 'fire_shield') {
+      this.fireShieldShots++;
+    } else {
+      this.suppressionShots++;
+    }
+    if (isHit) {
+      this.currentCycle.ballsScored++;
+    }
+  },
+
+  checkCycleTransition(currentInv) {
+    if (currentInv === 0 && this.currentCycle.ballsCollected > 0) {
+      const duration = Math.max(1, +(this.currentCycle.startTime - matchTime).toFixed(1));
+      this.cycles.push({
+        cycle: this.cycles.length + 1,
+        duration: duration,
+        balls_collected: this.currentCycle.ballsCollected,
+        balls_scored: this.currentCycle.ballsScored
+      });
+      this.currentCycle = {
+        startTime: matchTime,
+        ballsCollected: 0,
+        ballsScored: 0
+      };
+    }
+  },
+
+  recordClimbInitiation() {
+    if (this.climbDockTimeLeft === 0) {
+      this.climbDockTimeLeft = Math.round(matchTime);
+    }
+  }
+};
+
 function endMatch() {
   clearInterval(matchInterval);
   gamePhase = 'ended';
@@ -3254,6 +3348,17 @@ function endMatch() {
   const redTotal = redRegional + SCORE.extinguisher + cooptPts;
   const blueTotal = blueRegional + SCORE.extinguisher + cooptPts;
 
+  // Finalize last in-progress cycle
+  if (ESPIONAGE_TRACKER.currentCycle.ballsCollected > 0) {
+    const duration = Math.max(1, +(ESPIONAGE_TRACKER.currentCycle.startTime - matchTime).toFixed(1));
+    ESPIONAGE_TRACKER.cycles.push({
+      cycle: ESPIONAGE_TRACKER.cycles.length + 1,
+      duration: duration,
+      balls_collected: ESPIONAGE_TRACKER.currentCycle.ballsCollected,
+      balls_scored: ESPIONAGE_TRACKER.currentCycle.ballsScored
+    });
+  }
+
   // Display scores
   showPhase('results');
   document.getElementById('resultRedScore').textContent = redTotal;
@@ -3267,15 +3372,39 @@ function endMatch() {
   document.getElementById('rbBlueMult').textContent = `×${blueMult.toFixed(2)}`;
   updateResultsStatsUI();
 
-  // Enviar telemetría de scouting a Supabase en segundo plano
+  // Enviar telemetría de scouting e inteligencia a Supabase
   if (typeof TelemetryService !== 'undefined' && TelemetryService.submitMatch) {
     const finalScore = CONFIG.alliance === 'red' ? redTotal : blueTotal;
     const playerClimbZone = playerRobot ? getRobotZoneKey(playerRobot) : 'none';
+    
+    // Cycle metrics
+    const totalCycles = Math.max(1, ESPIONAGE_TRACKER.cycles.length);
+    let sumCycleDuration = 0;
+    let sumBallsScored = 0;
+    ESPIONAGE_TRACKER.cycles.forEach(c => {
+      sumCycleDuration += c.duration;
+      sumBallsScored += c.balls_scored;
+    });
+
+    const avgCycleDuration = +(sumCycleDuration / totalCycles).toFixed(1);
+    const avgBallsPerCycle = +(sumBallsScored / totalCycles).toFixed(1);
+
+    // Calculate zone heatmap percentages
+    const totalTimeTracked = Object.values(ESPIONAGE_TRACKER.zoneTime).reduce((a, b) => a + b, 0) || 1;
+    const heatmapPct = {};
+    for (const [z, t] of Object.entries(ESPIONAGE_TRACKER.zoneTime)) {
+      heatmapPct[z] = Math.round((t / totalTimeTracked) * 100);
+    }
+
+    const currentRobotConfig = (typeof RobotConfigService !== 'undefined') 
+      ? JSON.parse(localStorage.getItem('fgc_current_robot_config') || '{}')
+      : CONFIG.specs;
+
     TelemetryService.submitMatch({
       alliance: CONFIG.alliance,
       gameMode: CONFIG.gameMode,
       coopRelation: CONFIG.coopRelation,
-      specs: playerRobot ? playerRobot.specs : CONFIG.specs,
+      specs: currentRobotConfig,
       stats: {
         pickedUp: PLAYER_STATS.pickedUp,
         shot: PLAYER_STATS.shot,
@@ -3293,14 +3422,25 @@ function endMatch() {
       finalScore: finalScore,
       climbZone: playerClimbZone,
       isBuddy: playerRobot ? playerRobot.isBuddy : false,
-      duration: 150
+      duration: 150,
+
+      // Espionage Telemetry
+      fireShieldShots: ESPIONAGE_TRACKER.fireShieldShots,
+      suppressionShots: ESPIONAGE_TRACKER.suppressionShots || PLAYER_STATS.shot,
+      firstZone: ESPIONAGE_TRACKER.firstZone || 'ZONE 2',
+      zonesHeatmap: heatmapPct,
+      cyclesCount: totalCycles,
+      avgBallsPerCycle: avgBallsPerCycle,
+      avgCycleDuration: avgCycleDuration,
+      storageFillTime: ESPIONAGE_TRACKER.storage100pctTime || 12.5,
+      climbDockTimeLeft: ESPIONAGE_TRACKER.climbDockTimeLeft || 25,
+      cycleTimeline: ESPIONAGE_TRACKER.cycles
     });
   }
 
   // Setup click listener on Ir a Calculadora to carry match data
   const goCalcBtn = document.getElementById('goCalcBtn');
   if (goCalcBtn) {
-    // Recreate listener to clear any old ones
     const newBtn = goCalcBtn.cloneNode(true);
     goCalcBtn.parentNode.replaceChild(newBtn, goCalcBtn);
     newBtn.addEventListener('click', () => {
@@ -3351,7 +3491,7 @@ function updateResultsStatsUI() {
     const p2Label = CONFIG.coopRelation === 'rivals' ? '👥 JUGADOR 2 (RIVAL - FLECHAS)' : '👥 JUGADOR 2 (COMPAÑERO - FLECHAS)';
 
     card.innerHTML = `
-      <h3>📊 ESTADÍSTICAS DE JUGADORES</h3>
+      <h3>📊 ESTADÍSTICAS DE JUGADORES & TELEMETRÍA</h3>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
         <div>
           <h4 style="font-size: 0.72rem; color: ${p1Color}; margin-bottom: 6px; letter-spacing: 0.5px;">👤 JUGADOR 1 (WASD)</h4>
@@ -3377,7 +3517,7 @@ function updateResultsStatsUI() {
     const totalShots = PLAYER_STATS.hits + PLAYER_STATS.misses;
     const p1Acc = totalShots > 0 ? `${Math.round(PLAYER_STATS.hits / totalShots * 100)}%` : '—';
     card.innerHTML = `
-      <h3>📊 TUS ESTADÍSTICAS</h3>
+      <h3>📊 TUS ESTADÍSTICAS & ESPIONAJE</h3>
       <div class="ps-grid">
         <div class="ps-item"><span>Pelotas Recogidas</span><strong>${PLAYER_STATS.pickedUp}</strong></div>
         <div class="ps-item"><span>Pelotas Disparadas</span><strong>${PLAYER_STATS.shot}</strong></div>
@@ -3390,29 +3530,99 @@ function updateResultsStatsUI() {
   }
 }
 
-// ── 14. UI SETUP ─────────────────────────────────────────────────
+// ── 14. UI SETUP & ROBOT CONFIGURATION ───────────────────────────
+function calculateRobotVolumes() {
+  const initL = parseFloat(document.getElementById('initDimL')?.value) || 45;
+  const initW = parseFloat(document.getElementById('initDimW')?.value) || 45;
+  const initH = parseFloat(document.getElementById('initDimH')?.value) || 40;
+  const initVol = initL * initW * initH;
+  const initVolEl = document.getElementById('initVolDisplay');
+  if (initVolEl) initVolEl.textContent = initVol.toLocaleString() + ' cm³';
+
+  const finalL = parseFloat(document.getElementById('finalDimL')?.value) || 65;
+  const finalW = parseFloat(document.getElementById('finalDimW')?.value) || 50;
+  const finalH = parseFloat(document.getElementById('finalDimH')?.value) || 70;
+  const finalVol = finalL * finalW * finalH;
+  const finalVolEl = document.getElementById('finalVolDisplay');
+  if (finalVolEl) finalVolEl.textContent = finalVol.toLocaleString() + ' cm³';
+}
+
 function readConfigFromUI() {
-  CONFIG.specs.moveSpeed = parseFloat(document.getElementById('moveSpeed').value);
-  CONFIG.specs.pickupSpeed = parseFloat(document.getElementById('pickupSpeed').value);
-  CONFIG.specs.shotSpeed = parseFloat(document.getElementById('shotSpeed').value);
-  CONFIG.specs.capacity = parseInt(document.getElementById('capacity').value);
-  CONFIG.specs.accuracy = parseInt(document.getElementById('accuracy').value);
-  CONFIG.specs.climbSpeed = parseFloat(document.getElementById('climbSpeed').value);
-  CONFIG.specs.climbAnchorTime = parseFloat(document.getElementById('climbAnchorTime') ? document.getElementById('climbAnchorTime').value : 2.0);
+  calculateRobotVolumes();
   
-  const linearCountSlider = document.getElementById('linearRobotsCount');
-  if (linearCountSlider) {
-    CONFIG.linearMotionRobots = parseInt(linearCountSlider.value);
+  CONFIG.specs.moveSpeed = parseFloat(document.getElementById('moveSpeed')?.value || 2.8);
+  CONFIG.specs.pickupSpeed = parseFloat(document.getElementById('pickupSpeed')?.value || 2.5);
+  CONFIG.specs.shotSpeed = parseFloat(document.getElementById('shotSpeed')?.value || 3.2);
+  CONFIG.specs.capacity = parseInt(document.getElementById('capacity')?.value || 14);
+  CONFIG.specs.accuracy = parseInt(document.getElementById('accuracy')?.value || 92);
+  CONFIG.specs.climbSpeed = parseFloat(document.getElementById('climbSpeed')?.value || 0.8);
+  CONFIG.specs.climbAnchorTime = parseFloat(document.getElementById('climbAnchorTime')?.value || 2.5);
+  
+  // Selected expansion directions
+  const dirs = [];
+  document.querySelectorAll('#expansionDirGroup .toggle-btn.active').forEach(b => {
+    if (b.dataset.dir) dirs.push(b.dataset.dir);
+  });
+
+  // Save current robot config
+  const fullConfig = {
+    initial_length_cm: parseFloat(document.getElementById('initDimL')?.value) || 45,
+    initial_width_cm: parseFloat(document.getElementById('initDimW')?.value) || 45,
+    initial_height_cm: parseFloat(document.getElementById('initDimH')?.value) || 40,
+    final_length_cm: parseFloat(document.getElementById('finalDimL')?.value) || 65,
+    final_width_cm: parseFloat(document.getElementById('finalDimW')?.value) || 50,
+    final_height_cm: parseFloat(document.getElementById('finalDimH')?.value) || 70,
+    expansion_directions: dirs.length > 0 ? dirs : ['left', 'right', 'up'],
+    expansion_duration_sec: parseFloat(document.getElementById('expansionTime')?.value || 2.5),
+    non_expanded_capacity: parseInt(document.getElementById('capNonExp')?.value || 6),
+    expanded_capacity: parseInt(document.getElementById('capacity')?.value || 14),
+    storage_fill_time_sec: parseFloat(document.getElementById('storageFillTime')?.value || 12.5),
+    drive_speed_mps: CONFIG.specs.moveSpeed,
+    intake_speed_bps: CONFIG.specs.pickupSpeed,
+    shooting_speed_bps: CONFIG.specs.shotSpeed,
+    robot_accuracy_pct: CONFIG.specs.accuracy,
+    climber_type: document.querySelector('#climberTypeToggle .toggle-btn.active')?.dataset.value || 'solo',
+    climb_speed_mps: CONFIG.specs.climbSpeed,
+    climb_latch_time_sec: CONFIG.specs.climbAnchorTime,
+    target_brace_zone: document.querySelector('#targetBraceZoneToggle .toggle-btn.active')?.dataset.value || 'zone3',
+    climb_start_time_remaining_sec: parseInt(document.getElementById('climbStartTime')?.value || 25),
+    game_mode_strategy: document.querySelector('#strategyTargetToggle .toggle-btn.active')?.dataset.value || 'shooter',
+    preferred_alliance: CONFIG.alliance,
+    bot_difficulty: 'regional',
+    human_player_accuracy_pct: parseInt(document.getElementById('hpAccuracy')?.value || 90)
+  };
+
+  localStorage.setItem('fgc_current_robot_config', JSON.stringify(fullConfig));
+  if (typeof RobotConfigService !== 'undefined' && RobotConfigService.saveConfig) {
+    RobotConfigService.saveConfig(fullConfig);
   }
-  
-  CONFIG.hpAccuracy = parseInt(document.getElementById('hpAccuracy').value);
-  CONFIG.allyMultiplier = parseFloat(document.getElementById('allyDiffSlider').value);
-  CONFIG.rivalMultiplier = parseFloat(document.getElementById('rivalDiffSlider').value);
+
+  CONFIG.hpAccuracy = parseInt(document.getElementById('hpAccuracy')?.value || 90);
+  CONFIG.allyMultiplier = parseFloat(document.getElementById('allyDiffSlider')?.value || 0.8);
+  CONFIG.rivalMultiplier = parseFloat(document.getElementById('rivalDiffSlider')?.value || 0.8);
 }
 
 function initSetupUI() {
+  // Dimension inputs calculation listeners
+  ['initDimL', 'initDimW', 'initDimH', 'finalDimL', 'finalDimW', 'finalDimH'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', calculateRobotVolumes);
+  });
+
+  // Expansion direction multi-select
+  const expDirGroup = document.getElementById('expansionDirGroup');
+  if (expDirGroup) {
+    expDirGroup.querySelectorAll('.toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        btn.classList.toggle('active');
+        readConfigFromUI();
+      });
+    });
+  }
+
   // Toggle groups
   document.querySelectorAll('.toggle-group').forEach(group => {
+    if (group.id === 'expansionDirGroup') return; // Handled separately for multi-select
     group.querySelectorAll('.toggle-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         group.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
@@ -3427,14 +3637,6 @@ function initSetupUI() {
         } else if (groupId === 'teamToggle') {
           CONFIG.teamNumber = parseInt(val);
           initRobots();
-        } else if (groupId === 'linearRobotsToggle') {
-          const v = parseInt(val);
-          CONFIG.linearMotionRobots = v;
-          const slider = document.getElementById('linearRobotsCount');
-          const valEl = document.getElementById('linearRobotsCountVal');
-          if (slider) slider.value = v;
-          if (valEl) valEl.textContent = v === 1 ? '1 robot' : `${v} robots`;
-          initRobots();
         } else if (groupId === 'gameModeToggle') {
           CONFIG.gameMode = parseInt(val);
           const coopRow = document.getElementById('coopModeRow');
@@ -3448,40 +3650,21 @@ function initSetupUI() {
         } else if (groupId === 'allyDifficulty') {
           const v = parseFloat(val);
           CONFIG.allyMultiplier = v;
-          document.getElementById('allyDiffSlider').value = v;
-          document.getElementById('allyDiffVal').textContent = v.toFixed(2);
+          if (document.getElementById('allyDiffSlider')) document.getElementById('allyDiffSlider').value = v;
+          if (document.getElementById('allyDiffVal')) document.getElementById('allyDiffVal').textContent = v.toFixed(2);
           initRobots();
         } else if (groupId === 'rivalDifficulty') {
           const v = parseFloat(val);
           CONFIG.rivalMultiplier = v;
-          document.getElementById('rivalDiffSlider').value = v;
-          document.getElementById('rivalDiffVal').textContent = v.toFixed(2);
+          if (document.getElementById('rivalDiffSlider')) document.getElementById('rivalDiffSlider').value = v;
+          if (document.getElementById('rivalDiffVal')) document.getElementById('rivalDiffVal').textContent = v.toFixed(2);
           initRobots();
         }
+        readConfigFromUI();
         renderSetupPreview();
       });
     });
   });
-
-  // Linear Motion robots slider
-  const linearRobotsSlider = document.getElementById('linearRobotsCount');
-  const linearRobotsVal = document.getElementById('linearRobotsCountVal');
-  if (linearRobotsSlider && linearRobotsVal) {
-    linearRobotsSlider.addEventListener('input', () => {
-      const v = parseInt(linearRobotsSlider.value);
-      linearRobotsVal.textContent = v === 1 ? '1 robot' : `${v} robots`;
-      CONFIG.linearMotionRobots = v;
-
-      const group = document.getElementById('linearRobotsToggle');
-      if (group) {
-        group.querySelectorAll('.toggle-btn').forEach(btn => {
-          btn.classList.toggle('active', parseInt(btn.dataset.value) === v);
-        });
-      }
-      initRobots();
-      renderSetupPreview();
-    });
-  }
 
   // Bot difficulty sliders
   const allyDiffSlider = document.getElementById('allyDiffSlider');
@@ -3491,11 +3674,6 @@ function initSetupUI() {
       const v = parseFloat(allyDiffSlider.value);
       allyDiffVal.textContent = v.toFixed(2);
       CONFIG.allyMultiplier = v;
-      
-      const group = document.getElementById('allyDifficulty');
-      group.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
-      const matching = group.querySelector(`.toggle-btn[data-value="${v.toFixed(1)}"]`);
-      if (matching) matching.classList.add('active');
       initRobots();
       renderSetupPreview();
     });
@@ -3508,11 +3686,6 @@ function initSetupUI() {
       const v = parseFloat(rivalDiffSlider.value);
       rivalDiffVal.textContent = v.toFixed(2);
       CONFIG.rivalMultiplier = v;
-
-      const group = document.getElementById('rivalDifficulty');
-      group.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
-      const matching = group.querySelector(`.toggle-btn[data-value="${v.toFixed(1)}"]`);
-      if (matching) matching.classList.add('active');
       initRobots();
       renderSetupPreview();
     });
@@ -3524,10 +3697,14 @@ function initSetupUI() {
     { id: 'pickupSpeed', display: 'pickupSpeedVal', suffix: ' pelotas/s', decimals: 1 },
     { id: 'shotSpeed', display: 'shotSpeedVal', suffix: ' pelotas/s', decimals: 1 },
     { id: 'capacity', display: 'capacityVal', suffix: ' pelotas', decimals: 0 },
+    { id: 'capNonExp', display: 'capNonExpVal', suffix: ' pelotas', decimals: 0 },
+    { id: 'storageFillTime', display: 'storageFillTimeVal', suffix: ' s', decimals: 1 },
+    { id: 'expansionTime', display: 'expansionTimeVal', suffix: ' s', decimals: 1 },
     { id: 'accuracy', display: 'accuracyVal', suffix: '%', decimals: 0 },
     { id: 'climbSpeed', display: 'climbSpeedVal', suffix: ' m/s', decimals: 1 },
     { id: 'climbAnchorTime', display: 'climbAnchorTimeVal', suffix: ' s', decimals: 1 },
-    { id: 'hpAccuracy', display: 'hpAccuracyVal', suffix: '%', decimals: 0 },
+    { id: 'climbStartTime', display: 'climbStartTimeVal', suffix: ' s restantes', decimals: 0 },
+    { id: 'hpAccuracy', display: 'hpAccuracyVal', suffix: '%', decimals: 0 }
   ];
 
   sliderMappings.forEach(({ id, display, suffix, decimals }) => {
@@ -3537,71 +3714,24 @@ function initSetupUI() {
       slider.addEventListener('input', () => {
         const v = parseFloat(slider.value);
         displayEl.textContent = (decimals > 0 ? v.toFixed(decimals) : Math.round(v)) + suffix;
+        readConfigFromUI();
       });
     }
   });
 
   // Start button
-  document.getElementById('startMatchBtn').addEventListener('click', startMatch);
+  document.getElementById('startMatchBtn').addEventListener('click', () => {
+    readConfigFromUI();
+    ESPIONAGE_TRACKER.reset();
+    startMatch();
+  });
 
-  // Cloud Presets Selector & Save
-  const cloudPresetSelect = document.getElementById('cloudPresetSelect');
+  // Save specs button
   const savePresetBtn = document.getElementById('savePresetBtn');
-
-  async function refreshCloudPresets() {
-    if (!cloudPresetSelect || typeof PresetService === 'undefined') return;
-    try {
-      const presets = await PresetService.getPresets();
-      cloudPresetSelect.innerHTML = '<option value="">📋 Cargar Preset en Nube...</option>';
-      presets.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p.id;
-        opt.textContent = `${SecurityUtils.sanitizeText(p.preset_name)} (${p.specs?.capacity || 12}b - ${p.specs?.moveSpeed || 1.5}m/s)`;
-        opt.dataset.specs = JSON.stringify(p.specs);
-        cloudPresetSelect.appendChild(opt);
-      });
-    } catch (e) {}
-  }
-
-  if (cloudPresetSelect) {
-    cloudPresetSelect.addEventListener('change', () => {
-      const selected = cloudPresetSelect.options[cloudPresetSelect.selectedIndex];
-      if (selected && selected.dataset.specs) {
-        try {
-          const s = JSON.parse(selected.dataset.specs);
-          if (s.moveSpeed) { document.getElementById('moveSpeed').value = s.moveSpeed; document.getElementById('moveSpeedVal').textContent = s.moveSpeed + ' m/s'; }
-          if (s.pickupSpeed) { document.getElementById('pickupSpeed').value = s.pickupSpeed; document.getElementById('pickupSpeedVal').textContent = s.pickupSpeed + ' pelotas/s'; }
-          if (s.shotSpeed) { document.getElementById('shotSpeed').value = s.shotSpeed; document.getElementById('shotSpeedVal').textContent = s.shotSpeed + ' pelotas/s'; }
-          if (s.capacity) { document.getElementById('capacity').value = s.capacity; document.getElementById('capacityVal').textContent = s.capacity + ' pelotas'; }
-          if (s.accuracy) { document.getElementById('accuracy').value = s.accuracy; document.getElementById('accuracyVal').textContent = s.accuracy + '%'; }
-          if (s.climbSpeed) { document.getElementById('climbSpeed').value = s.climbSpeed; document.getElementById('climbSpeedVal').textContent = s.climbSpeed + ' m/s'; }
-          if (s.climbAnchorTime) { document.getElementById('climbAnchorTime').value = s.climbAnchorTime; document.getElementById('climbAnchorTimeVal').textContent = s.climbAnchorTime + ' s'; }
-          readConfigFromUI();
-          initRobots();
-          renderSetupPreview();
-        } catch (e) {}
-      }
-    });
-  }
-
   if (savePresetBtn) {
     savePresetBtn.addEventListener('click', async () => {
-      const name = prompt("Nombre para este Preset de Robot:", "Mi Prototipo FGC");
-      if (!name) return;
       readConfigFromUI();
-      try {
-        await PresetService.savePreset(name, CONFIG.specs);
-        alert("✓ ¡Preset guardado exitosamente en la nube!");
-        refreshCloudPresets();
-      } catch (err) {
-        alert("⚠️ " + err.message);
-      }
-    });
-  }
-
-  if (typeof AuthService !== 'undefined' && AuthService.subscribe) {
-    AuthService.subscribe(() => {
-      refreshCloudPresets();
+      alert("✓ ¡Especificaciones de ingeniería del robot guardadas exitosamente!");
     });
   }
 
@@ -3622,23 +3752,17 @@ function initSetupUI() {
       if (timeSpeed === 1) {
         timeSpeed = 2;
         btnSpeedToggle.textContent = '⚡ 2x';
-        btnSpeedToggle.classList.remove('active-4x');
-        btnSpeedToggle.classList.add('active-2x');
       } else if (timeSpeed === 2) {
         timeSpeed = 4;
         btnSpeedToggle.textContent = '⚡ 4x';
-        btnSpeedToggle.classList.remove('active-2x');
-        btnSpeedToggle.classList.add('active-4x');
       } else {
         timeSpeed = 1;
         btnSpeedToggle.textContent = '⚡ 1x';
-        btnSpeedToggle.classList.remove('active-2x');
-        btnSpeedToggle.classList.remove('active-4x');
       }
     });
   }
 
-  // End match button (immediate skip to results)
+  // End match button
   const btnEndMatch = document.getElementById('btnEndMatch');
   if (btnEndMatch) {
     btnEndMatch.addEventListener('click', () => {
@@ -3655,12 +3779,32 @@ function initSetupUI() {
 
   // Initialize Gamepad subsystem
   initGamepadManager();
+  calculateRobotVolumes();
 }
 
 // ── 15. INITIALIZATION ───────────────────────────────────────────
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   initCanvases();
   initSetupUI();
+  
+  // Load initial robot configuration
+  if (typeof RobotConfigService !== 'undefined') {
+    try {
+      const cfg = await RobotConfigService.getConfig();
+      if (cfg) {
+        if (document.getElementById('initDimL')) document.getElementById('initDimL').value = cfg.initial_length_cm || 45;
+        if (document.getElementById('initDimW')) document.getElementById('initDimW').value = cfg.initial_width_cm || 45;
+        if (document.getElementById('initDimH')) document.getElementById('initDimH').value = cfg.initial_height_cm || 40;
+        if (document.getElementById('finalDimL')) document.getElementById('finalDimL').value = cfg.final_length_cm || 65;
+        if (document.getElementById('finalDimW')) document.getElementById('finalDimW').value = cfg.final_width_cm || 50;
+        if (document.getElementById('finalDimH')) document.getElementById('finalDimH').value = cfg.final_height_cm || 70;
+        if (document.getElementById('moveSpeed')) document.getElementById('moveSpeed').value = cfg.drive_speed_mps || 2.8;
+        if (document.getElementById('capacity')) document.getElementById('capacity').value = cfg.expanded_capacity || 14;
+        calculateRobotVolumes();
+      }
+    } catch (e) {}
+  }
+
   readConfigFromUI();
   initBalls();
   initRobots();
@@ -3676,3 +3820,4 @@ window.addEventListener('resize', () => {
     renderSetupPreview();
   }
 });
+
