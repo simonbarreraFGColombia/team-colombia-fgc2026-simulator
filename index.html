@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FGC 2026 Platform • Igniting Innovation - Team Colombia</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <!-- Google Fonts: Montserrat, Orbitron, Poppins -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Orbitron:wght@700;900&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="chatbot.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    /* Landing Specific Styles */
+    .hero-section {
+      background: radial-gradient(circle at 50% 0%, rgba(232, 48, 72, 0.15) 0%, rgba(10, 12, 20, 0.95) 75%), #0a0c14;
+      border: 1px solid rgba(255, 215, 0, 0.2);
+      border-radius: 20px;
+      padding: 45px 30px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 30px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 215, 0, 0.1);
+      border: 1px solid rgba(255, 215, 0, 0.3);
+      color: #ffd700;
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+      font-family: 'Orbitron', sans-serif;
+    }
+    .hero-title {
+      font-size: 2.4rem;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 900;
+      color: #fff;
+      margin: 0 0 14px 0;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+    }
+    .hero-title span {
+      background: linear-gradient(135deg, #ffd700 0%, #ff8c28 50%, #e83048 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-desc {
+      font-size: 0.95rem;
+      color: #94a3b8;
+      max-width: 680px;
+      margin: 0 auto 28px auto;
+      line-height: 1.6;
+    }
+    .hero-actions {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+    .btn-hero {
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      font-family: 'Montserrat', sans-serif;
+    }
+    .btn-hero-primary {
+      background: linear-gradient(135deg, #ffd700, #ff8c28);
+      color: #0a0c14;
+      border: none;
+      box-shadow: 0 4px 20px rgba(255, 215, 0, 0.35);
+    }
+    .btn-hero-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 25px rgba(255, 215, 0, 0.5);
+    }
+    .btn-hero-secondary {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+    .btn-hero-secondary:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: #ffd700;
+      color: #ffd700;
+    }
+
+    /* Modules Grid */
+    .modules-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin-bottom: 35px;
+    }
+    .module-card {
+      background: #111422;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .module-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(255, 215, 0, 0.4);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+    }
+    .module-icon {
+      font-size: 32px;
+      margin-bottom: 14px;
+      display: inline-block;
+    }
+    .module-card h3 {
+      font-size: 1.15rem;
+      color: #fff;
+      margin: 0 0 8px 0;
+      font-family: 'Orbitron', sans-serif;
+    }
+    .module-card p {
+      font-size: 0.82rem;
+      color: #94a3b8;
+      line-height: 1.5;
+      margin: 0 0 18px 0;
+      flex: 1;
+    }
+
+    /* Auth & User Bar */
+    .auth-banner {
+      background: linear-gradient(90deg, rgba(232, 48, 72, 0.1), rgba(51, 119, 255, 0.1));
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 25px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    .user-profile-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .user-flag {
+      font-size: 24px;
+      line-height: 1;
+    }
+    .user-details strong {
+      display: block;
+      color: #ffd700;
+      font-size: 0.95rem;
+      font-family: 'Orbitron', sans-serif;
+    }
+    .user-details span {
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+
+    /* Leaderboard Preview Table */
+    .leaderboard-preview {
+      background: #111422;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 22px;
+    }
+    .lb-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 0.85rem;
+    }
+    .lb-table th {
+      text-align: left;
+      padding: 10px 12px;
+      color: #94a3b8;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      font-family: 'Orbitron', sans-serif;
+    }
+    .lb-table td {
+      padding: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: #e2e8f0;
+    }
+    .lb-rank {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      color: #ffd700;
+      width: 40px;
+    }
+
+    /* Auth Modal */
+    .auth-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 20000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .auth-modal.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .auth-modal-content {
+      background: #131728;
+      border: 1px solid rgba(255, 215, 0, 0.3);
+      border-radius: 18px;
+      width: 420px;
+      max-width: calc(100vw - 32px);
+      padding: 28px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+      position: relative;
+    }
+    .auth-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 10px;
+    }
+    .auth-tab-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 6px 12px;
+      font-family: 'Orbitron', sans-serif;
+      transition: color 0.2s;
+    }
+    .auth-tab-btn.active {
+      color: #ffd700;
+      border-bottom: 2px solid #ffd700;
+    }
+    .form-group {
+      margin-bottom: 14px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin-bottom: 5px;
+      font-weight: 600;
+    }
+    .form-input {
+      width: 100%;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.85rem;
+      box-sizing: border-box;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: #ffd700;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="logo-area">
+        <span class="flag-stripe yellow"></span>
+        <span class="flag-stripe blue"></span>
+        <span class="flag-stripe red"></span>
+        <h1>TEAM COLOMBIA • FGC 2026</h1>
+      </div>
+      <div style="display: flex; align-items: center; gap: 15px;">
+        <div id="headerAuthArea">
+          <button id="openAuthModalBtn" class="primary-btn" style="padding: 8px 16px; font-size: 0.8rem;">
+            👤 Iniciar Sesión / Registro
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- User Profile Bar (When Logged in) -->
+    <div id="userBanner" class="auth-banner" style="display: none;">
+      <div class="user-profile-badge">
+        <span class="user-flag" id="userFlag">🇨🇴</span>
+        <div class="user-details">
+          <strong id="userTeamName">Team Colombia</strong>
+          <span id="userSubtitle">Equipo Oficial • FGC 2026 Incheon</span>
+        </div>
+      </div>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <span class="badge" style="background: rgba(45,210,100,0.15); color: #2dd264;">✓ Sesión Activa</span>
+        <button id="logoutBtn" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #94a3b8; font-size: 0.75rem; padding: 6px 12px; border-radius: 6px; cursor: pointer;">Cerrar Sesión</button>
+      </div>
+    </div>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="hero-badge">⚡ PLATAFORMA OFICIAL DE SIMULACIÓN Y ESTRATEGIA</div>
+      <h2 class="hero-title">
+        FGC 2026: <span>IGNITING INNOVATION</span>
+      </h2>
+      <p class="hero-desc">
+        Bienvenido al ecosistema global de simulación de física, cálculo táctico de alianzas y telemetría de juego para el reto del <strong>FIRST Global Challenge 2026 en Incheon, Corea del Sur</strong>. Desarrollado con el espíritu de innovación abierta y colaboración de <strong>Team Colombia</strong>.
+      </p>
+      <div class="hero-actions">
+        <a href="simulacion.html" class="btn-hero btn-hero-primary">
+          🎮 Entrar al Simulador 2D
+        </a>
+        <a href="estrategias.html" class="btn-hero btn-hero-secondary">
+          🧠 Diseñador de Estrategias
+        </a>
+        <a href="calculadora.html" class="btn-hero btn-hero-secondary">
+          🧮 Calculadora de Puntos
+        </a>
+      </div>
+    </section>
+
+    <!-- Modules Grid -->
+    <div class="modules-grid">
+      
+      <!-- Module 1: Simulador 2D -->
+      <div class="module-card">
+        <div>
+          <span class="module-icon">🎮</span>
+          <h3>SIMULADOR 2D EN VIVO</h3>
+          <p>
+            Partidos en tiempo real de 2:30 con física de colisiones, mecánicas de disparo, tolva extensible <strong>Linear Motion</strong>, gancho de anclaje y escalada en brace. Soporte para control de teclado o mando PlayStation/Xbox.
+          </p>
+        </div>
+        <a href="simulacion.html" class="primary-btn" style="text-decoration: none; justify-content: center; text-align: center;">
+          Abrir Simulador
+        </a>
+      </div>
+
+      <!-- Module 2: Playbook Builder -->
+      <div class="module-card">
+        <div>
+          <span class="module-icon">🧠</span>
+          <h3>PLAYBOOK TÁCTICO</h3>
+          <p>
+            Taller interactivo de diseño de estrategias para los 3 robots de la alianza. Configura sinergias de tiro, prioridades de Human Player y calcula proyecciones matemáticas de puntos guardadas en la nube.
+          </p>
+        </div>
+        <a href="estrategias.html" class="primary-btn" style="text-decoration: none; justify-content: center; text-align: center; background: linear-gradient(135deg, #ffd700, #ff8c28); color: #0a0c14;">
+          Diseñar Estrategia
+        </a>
+      </div>
+
+      <!-- Module 3: Calculadora Oficial -->
+      <div class="module-card">
+        <div>
+          <span class="module-icon">🧮</span>
+          <h3>CALCULADORA DE PUNTOS</h3>
+          <p>
+            Motor matemático de reglas oficiales FGC 2026. Calcula escenarios regionales, bonificaciones de alianza cooperativa y multiplicadores de escalada en tiempo real.
+          </p>
+        </div>
+        <a href="calculadora.html" class="primary-btn" style="text-decoration: none; justify-content: center; text-align: center; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2);">
+          Abrir Calculadora
+        </a>
+      </div>
+
+    </div>
+
+    <!-- Live Leaderboard Preview -->
+    <div class="leaderboard-preview">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div>
+          <h3 style="margin: 0; font-family: 'Orbitron', sans-serif; font-size: 1.1rem; color: #fff;">🏆 RANKING MUNDIAL DE EQUIPOS</h3>
+          <span style="font-size: 0.75rem; color: #94a3b8;">Tabla de clasificación global verificada en tiempo real</span>
+        </div>
+        <a href="simulacion.html" style="color: #ffd700; font-size: 0.8rem; font-weight: 600; text-decoration: none;">Competir en el Simulador ➔</a>
+      </div>
+
+      <div style="overflow-x: auto; margin-top: 15px;">
+        <table class="lb-table">
+          <thead>
+            <tr>
+              <th>Rango</th>
+              <th>Equipo / País</th>
+              <th>Número</th>
+              <th>Puntaje Récord</th>
+              <th>Partidos</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboardTbody">
+            <tr>
+              <td class="lb-rank">#1</td>
+              <td>🇨🇴 Team Colombia</td>
+              <td>#108</td>
+              <td><strong style="color: #2dd264;">540 pts</strong></td>
+              <td>28</td>
+            </tr>
+            <tr>
+              <td class="lb-rank">#2</td>
+              <td>🇲🇽 Team Mexico</td>
+              <td>#142</td>
+              <td><strong style="color: #2dd264;">495 pts</strong></td>
+              <td>19</td>
+            </tr>
+            <tr>
+              <td class="lb-rank">#3</td>
+              <td>🇩🇪 Team Germany</td>
+              <td>#56</td>
+              <td><strong style="color: #2dd264;">480 pts</strong></td>
+              <td>22</td>
+            </tr>
+            <tr>
+              <td class="lb-rank">#4</td>
+              <td>🇰🇿 Team Kazakhstan</td>
+              <td>#88</td>
+              <td><strong style="color: #2dd264;">465 pts</strong></td>
+              <td>15</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Authentication Modal -->
+  <div class="auth-modal" id="authModal">
+    <div class="auth-modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="margin: 0; font-family: 'Orbitron', sans-serif; color: #ffd700; font-size: 1.1rem;">PORTAL DE ACCESO FGC</h3>
+        <button id="closeAuthModalBtn" style="background: transparent; border: none; color: #94a3b8; font-size: 20px; cursor: pointer;">✕</button>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab-btn active" id="tabLoginBtn">Iniciar Sesión</button>
+        <button class="auth-tab-btn" id="tabRegisterBtn">Registrar Equipo</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="loginForm">
+        <div class="form-group">
+          <label>Correo Electrónico</label>
+          <input type="email" id="loginEmail" class="form-input" placeholder="tu-equipo@ejemplo.com" required>
+        </div>
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required>
+        </div>
+        <button type="submit" id="submitLoginBtn" class="primary-btn" style="width: 100%; justify-content: center; padding: 12px; margin-top: 10px;">
+          Ingresar a la Plataforma
+        </button>
+      </form>
+
+      <!-- Register Form -->
+      <form id="registerForm" style="display: none;">
+        <div class="form-group">
+          <label>Nombre del Equipo / Institución</label>
+          <input type="text" id="regTeamName" class="form-input" placeholder="Ej. Team Mexico / Aztech" required maxlength="50">
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <div class="form-group" style="flex: 1;">
+            <label>País (ISO)</label>
+            <select id="regCountry" class="form-input" style="background: #131728;">
+              <option value="CO">🇨🇴 Colombia</option>
+              <option value="MX">🇲🇽 México</option>
+              <option value="US">🇺🇸 Estados Unidos</option>
+              <option value="DE">🇩🇪 Alemania</option>
+              <option value="KZ">🇰🇿 Kazajistán</option>
+              <option value="BR">🇧🇷 Brasil</option>
+              <option value="AR">🇦🇷 Argentina</option>
+              <option value="CA">🇨🇦 Canadá</option>
+              <option value="JP">🇯🇵 Japón</option>
+              <option value="KR">🇰🇷 Corea del Sur</option>
+              <option value="OTHER">🌐 Otro País</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label>Número FGC / FRC</label>
+            <input type="text" id="regTeamNumber" class="form-input" placeholder="#108" maxlength="15">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Correo Electrónico</label>
+          <input type="email" id="regEmail" class="form-input" placeholder="capitan@tu-equipo.org" required>
+        </div>
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input type="password" id="regPassword" class="form-input" placeholder="Mínimo 6 caracteres" required minlength="6">
+        </div>
+        <button type="submit" id="submitRegisterBtn" class="primary-btn" style="width: 100%; justify-content: center; padding: 12px; margin-top: 10px; background: linear-gradient(135deg, #ffd700, #ff8c28); color: #0a0c14;">
+          Crear Cuenta y Guardar Récords
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script src="supabase-client.js"></script>
+  <script src="chatbot.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const authModal = document.getElementById('authModal');
+      const openBtn = document.getElementById('openAuthModalBtn');
+      const closeBtn = document.getElementById('closeAuthModalBtn');
+      const tabLogin = document.getElementById('tabLoginBtn');
+      const tabRegister = document.getElementById('tabRegisterBtn');
+      const loginForm = document.getElementById('loginForm');
+      const registerForm = document.getElementById('registerForm');
+      const userBanner = document.getElementById('userBanner');
+      const headerAuthArea = document.getElementById('headerAuthArea');
+      const logoutBtn = document.getElementById('logoutBtn');
+
+      // Modal Toggles
+      if (openBtn) openBtn.addEventListener('click', () => authModal.classList.add('active'));
+      if (closeBtn) closeBtn.addEventListener('click', () => authModal.classList.remove('active'));
+
+      // Tab Toggles
+      tabLogin.addEventListener('click', () => {
+        tabLogin.classList.add('active');
+        tabRegister.classList.remove('active');
+        loginForm.style.display = 'block';
+        registerForm.style.display = 'none';
+      });
+
+      tabRegister.addEventListener('click', () => {
+        tabRegister.classList.add('active');
+        tabLogin.classList.remove('active');
+        registerForm.style.display = 'block';
+        loginForm.style.display = 'none';
+      });
+
+      // Handle Login
+      loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('loginEmail').value;
+        const pass = document.getElementById('loginPassword').value;
+        const submitBtn = document.getElementById('submitLoginBtn');
+        try {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Verificando...';
+          await AuthService.signIn(email, pass);
+          authModal.classList.remove('active');
+          alert('✓ ¡Bienvenido de vuelta!');
+        } catch (err) {
+          alert('⚠️ ' + err.message);
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Ingresar a la Plataforma';
+        }
+      });
+
+      // Handle Register
+      registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const teamName = document.getElementById('regTeamName').value;
+        const country = document.getElementById('regCountry').value;
+        const number = document.getElementById('regTeamNumber').value;
+        const email = document.getElementById('regEmail').value;
+        const pass = document.getElementById('regPassword').value;
+        const submitBtn = document.getElementById('submitRegisterBtn');
+
+        try {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Creando cuenta...';
+          await AuthService.signUp(email, pass, {
+            teamName,
+            countryCode: country,
+            teamNumber: number
+          });
+          authModal.classList.remove('active');
+          alert('✓ ¡Cuenta registrada exitosamente!');
+        } catch (err) {
+          alert('⚠️ ' + err.message);
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Crear Cuenta y Guardar Récords';
+        }
+      });
+
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+          await AuthService.signOut();
+        });
+      }
+
+      // Sync Session UI
+      AuthService.subscribe((user, profile) => {
+        if (user && profile) {
+          if (userBanner) userBanner.style.display = 'flex';
+          if (headerAuthArea) headerAuthArea.innerHTML = `
+            <span style="font-size: 0.85rem; color: #ffd700; font-weight: 700; font-family: 'Orbitron', sans-serif;">
+              ${SecurityUtils.sanitizeText(profile.team_name)}
+            </span>
+          `;
+          const flagEl = document.getElementById('userFlag');
+          const nameEl = document.getElementById('userTeamName');
+          const subEl = document.getElementById('userSubtitle');
+          if (nameEl) nameEl.textContent = profile.team_name;
+          if (subEl) subEl.textContent = `${profile.country_code} • ${profile.team_number || 'FGC Team'}`;
+        } else {
+          if (userBanner) userBanner.style.display = 'none';
+          if (headerAuthArea) headerAuthArea.innerHTML = `
+            <button id="openAuthModalBtn" class="primary-btn" style="padding: 8px 16px; font-size: 0.8rem;">
+              👤 Iniciar Sesión / Registro
+            </button>
+          `;
+          document.getElementById('openAuthModalBtn')?.addEventListener('click', () => authModal.classList.add('active'));
+        }
+      });
+
+      // Load Real-time Leaderboard
+      async function loadLeaderboard() {
+        const tbody = document.getElementById('leaderboardTbody');
+        if (!tbody) return;
+        const data = await LeaderboardService.getLeaderboard(5);
+        if (data && data.length > 0) {
+          tbody.innerHTML = data.map((item, idx) => `
+            <tr>
+              <td class="lb-rank">#${item.rank || idx + 1}</td>
+              <td>${SecurityUtils.sanitizeText(item.team_name)}</td>
+              <td>${SecurityUtils.sanitizeText(item.team_number || '-')}</td>
+              <td><strong style="color: #2dd264;">${item.best_score || 0} pts</strong></td>
+              <td>${item.matches_played || 1}</td>
+            </tr>
+          `).join('');
+        }
+      }
+      loadLeaderboard();
+    });
+  </script>
+</body>
+</html>

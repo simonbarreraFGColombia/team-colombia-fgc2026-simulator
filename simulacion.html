@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulación en Tiempo Real FGC 2026 — Team Colombia</title>
+  <meta name="description" content="Simulador interactivo en tiempo real del partido FGC 2026 Igniting Innovation. Controla tu robot con WASD, recoge wildfires y anota puntos.">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&family=Orbitron:wght@700;900&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="simulacion.css">
+  <link rel="stylesheet" href="chatbot.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div class="app-container sim-app">
+
+    <!-- ═══ Header ═══ -->
+    <header class="app-header">
+      <div class="logo-area">
+        <span class="flag-stripe yellow"></span>
+        <span class="flag-stripe blue"></span>
+        <span class="flag-stripe red"></span>
+        <h1>TEAM COLOMBIA • SIMULADOR</h1>
+      </div>
+      <nav class="nav-area">
+        <a href="index.html" class="nav-link">Portal</a>
+        <a href="simulacion.html" class="nav-link active">Simulación</a>
+        <a href="estrategias.html" class="nav-link">Playbook</a>
+        <a href="calculadora.html" class="nav-link">Calculadora</a>
+      </nav>
+    </header>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         PHASE 1: SETUP SCREEN
+         ═══════════════════════════════════════════════════════════ -->
+    <div id="setupScreen" class="sim-phase">
+
+      <!-- Big Timer Preview -->
+      <div class="setup-timer-preview">
+        <div class="setup-timer-value">2:30</div>
+        <div class="setup-timer-label">DURACIÓN DEL PARTIDO</div>
+      </div>
+
+      <div class="setup-workspace">
+        <!-- Left: Field Preview -->
+        <div class="setup-field-preview">
+          <canvas id="setupCanvas" width="500" height="500"></canvas>
+          <div class="setup-field-hint">Vista previa del campo • Escoge tu posición</div>
+        </div>
+
+        <!-- Right: Configuration Panel -->
+        <div class="setup-config">
+
+          <!-- Alliance & Position -->
+          <div class="config-card">
+            <div class="config-card-header">
+              <span class="config-icon">🏳️</span>
+              <h3>ALIANZA Y POSICIÓN</h3>
+            </div>
+            <div class="config-row">
+              <label>Alianza</label>
+              <div class="toggle-group" id="allianceToggle">
+                <button class="toggle-btn active" data-value="red">🔴 Red</button>
+                <button class="toggle-btn" data-value="blue">🔵 Blue</button>
+              </div>
+            </div>
+            <div class="config-row">
+              <label>Equipo</label>
+              <div class="toggle-group" id="teamToggle">
+                <button class="toggle-btn active" data-value="1">Equipo 1</button>
+                <button class="toggle-btn" data-value="2">Equipo 2</button>
+                <button class="toggle-btn" data-value="3">Equipo 3</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Robot Specs -->
+          <div class="config-card">
+            <div class="config-card-header">
+              <span class="config-icon">🤖</span>
+              <h3>SPECS DE MI ROBOT</h3>
+            </div>
+            <div class="spec-row">
+              <div class="spec-info">
+                <label>Velocidad de Movimiento</label>
+                <span class="spec-unit" id="moveSpeedVal">1.5 m/s</span>
+              </div>
+              <input type="range" class="spec-slider" id="moveSpeed" min="0.5" max="3.0" step="0.1" value="1.5">
+            </div>
+            <div class="spec-row">
+              <div class="spec-info">
+                <label>Velocidad de Recogida</label>
+                <span class="spec-unit" id="pickupSpeedVal">2.0 pelotas/s</span>
+              </div>
+              <input type="range" class="spec-slider" id="pickupSpeed" min="0.5" max="5.0" step="0.5" value="2.0">
+            </div>
+            <div class="spec-row">
+              <div class="spec-info">
+                <label>Velocidad de Disparo</label>
+                <span class="spec-unit" id="shotSpeedVal">3.0 pelotas/s</span>
+              </div>
+              <input type="range" class="spec-slider" id="shotSpeed" min="1.0" max="8.0" step="0.5" value="3.0">
+            </div>
+            <div class="spec-row">
+              <div class="spec-info">
+                <label>Capacidad de Almacenamiento</label>
+                <span class="spec-unit" id="capacityVal">12 pelotas</span>
+              </div>
+              <input type="range" class="spec-slider" id="capacity" min="3" max="100" step="1" value="12">
+            </div>
+            <div class="spec-row">
+              <div class="spec-info">
+                <label>Precisión del Robot</label>
+                <span class="spec-unit" id="accuracyVal">80%</span>
+              </div>
+              <input type="range" class="spec-slider" id="accuracy" min="20" max="100" step="5" value="80">
+            </div>
+            <div class="spec-row">
+              <div class="spec-info">
+                <label>Velocidad de Escalada</label>
+                <span class="spec-unit" id="climbSpeedVal">0.5 m/s</span>
+              </div>
+              <input type="range" class="spec-slider" id="climbSpeed" min="0.1" max="1.5" step="0.1" value="0.5">
+            </div>
+            <div class="spec-row">
+              <div class="spec-info">
+                <label>Tiempo de Anclaje de Escalada</label>
+                <span class="spec-unit" id="climbAnchorTimeVal">2.0 s</span>
+              </div>
+              <input type="range" class="spec-slider" id="climbAnchorTime" min="1.0" max="10.0" step="0.5" value="2.0">
+            </div>
+
+            <!-- Cloud Presets Toolbar -->
+            <div style="display: flex; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.08);">
+              <select id="cloudPresetSelect" style="flex: 1; background: #131728; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: #fff; font-size: 0.75rem; padding: 6px 8px;">
+                <option value="">📋 Cargar Preset en Nube...</option>
+              </select>
+              <button id="savePresetBtn" type="button" style="background: rgba(255,215,0,0.15); border: 1px solid rgba(255,215,0,0.4); color: #ffd700; font-size: 0.75rem; padding: 6px 10px; border-radius: 6px; cursor: pointer;">
+                💾 Guardar
+              </button>
+            </div>
+          </div>
+
+          <!-- Linear Motion Configuration -->
+          <div class="config-card">
+            <div class="config-card-header">
+              <span class="config-icon">📦</span>
+              <h3>ROBOTS CON LINEAR MOTION</h3>
+            </div>
+            <div class="config-row">
+              <label>Distribución</label>
+              <div class="toggle-group" id="linearRobotsToggle">
+                <button class="toggle-btn" data-value="0">0 (Ninguno)</button>
+                <button class="toggle-btn active" data-value="1">1 (Solo Tú)</button>
+                <button class="toggle-btn" data-value="3">3 (Alianza)</button>
+                <button class="toggle-btn" data-value="6">6 (Todos)</button>
+              </div>
+            </div>
+            <div class="spec-row" style="margin-top: -2px;">
+              <div class="spec-info">
+                <label>Cantidad de Robots con Almacenamiento Expandible</label>
+                <span class="spec-unit" id="linearRobotsCountVal">1 robot</span>
+              </div>
+              <input type="range" class="spec-slider" id="linearRobotsCount" min="0" max="6" step="1" value="1">
+            </div>
+          </div>
+
+          <!-- Modo de Juego -->
+          <div class="config-card">
+            <div class="config-card-header">
+              <span class="config-icon">👥</span>
+              <h3>MODO DE JUEGO</h3>
+            </div>
+            <div class="config-row">
+              <label>Jugadores</label>
+              <div class="toggle-group" id="gameModeToggle">
+                <button class="toggle-btn active" data-value="1">1 Jugador 👤</button>
+                <button class="toggle-btn" data-value="2">2 Jugadores 👥</button>
+              </div>
+            </div>
+            <div class="config-row" id="coopModeRow" style="display: none; margin-top: 10px; border-top: 1px dashed rgba(255,255,255,0.06); padding-top: 10px;">
+              <label>Relación de Alianza</label>
+              <div class="toggle-group" id="coopRelationToggle">
+                <button class="toggle-btn active" data-value="teammates">Compañeros 🤝</button>
+                <button class="toggle-btn" data-value="rivals">Rivales ⚔️</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bot Difficulty -->
+          <div class="config-card">
+            <div class="config-card-header">
+              <span class="config-icon">🎮</span>
+              <h3>DIFICULTAD DE BOTS</h3>
+            </div>
+            <div class="config-row">
+              <label>Aliados</label>
+              <div class="toggle-group" id="allyDifficulty">
+                <button class="toggle-btn" data-value="0.0">Nula</button>
+                <button class="toggle-btn" data-value="0.6">Básica</button>
+                <button class="toggle-btn active" data-value="0.8">Media</button>
+                <button class="toggle-btn" data-value="1.0">Fuerte</button>
+              </div>
+            </div>
+            <div class="spec-row" style="margin-top: -2px; margin-bottom: 6px;">
+              <div class="spec-info">
+                <label>Ajuste Aliados</label>
+                <span class="spec-unit" id="allyDiffVal">0.80</span>
+              </div>
+              <input type="range" class="spec-slider" id="allyDiffSlider" min="0.0" max="1.0" step="0.05" value="0.80">
+            </div>
+
+            <div class="config-row" style="margin-top: 4px;">
+              <label>Rivales</label>
+              <div class="toggle-group" id="rivalDifficulty">
+                <button class="toggle-btn" data-value="0.0">Nula</button>
+                <button class="toggle-btn" data-value="0.6">Básica</button>
+                <button class="toggle-btn active" data-value="0.8">Media</button>
+                <button class="toggle-btn" data-value="1.0">Fuerte</button>
+              </div>
+            </div>
+            <div class="spec-row" style="margin-top: -2px; margin-bottom: 4px;">
+              <div class="spec-info">
+                <label>Ajuste Rivales</label>
+                <span class="spec-unit" id="rivalDiffVal">0.80</span>
+              </div>
+              <input type="range" class="spec-slider" id="rivalDiffSlider" min="0.0" max="1.0" step="0.05" value="0.80">
+            </div>
+          </div>
+
+          <!-- Human Player -->
+          <div class="config-card">
+            <div class="config-card-header">
+              <span class="config-icon">🧑</span>
+              <h3>HUMAN PLAYER</h3>
+            </div>
+            <div class="spec-row">
+              <div class="spec-info">
+                <label>Precisión del Humano</label>
+                <span class="spec-unit" id="hpAccuracyVal">70%</span>
+              </div>
+              <input type="range" class="spec-slider hp-slider" id="hpAccuracy" min="10" max="100" step="5" value="70">
+            </div>
+          </div>
+
+          <!-- Gamepad Config Card -->
+          <div class="config-card gamepad-card">
+            <div class="config-card-header">
+              <span class="config-icon">🎮</span>
+              <h3>CONTROL POR MANDO</h3>
+            </div>
+            <div class="gamepad-status-row">
+              <div class="gamepad-status-info">
+                <span class="gamepad-status-badge disconnected" id="gamepadStatusBadge">
+                  <span class="status-dot"></span>
+                  <span id="gamepadStatusText">Sin Mando Conectado</span>
+                </span>
+                <span class="gamepad-subtext" id="gamepadSubtext">Conecta tu mando PlayStation por USB y presiona cualquier botón</span>
+              </div>
+              <button type="button" class="gamepad-map-btn" id="openGamepadModalBtn">
+                ⚙️ Mapear Botones
+              </button>
+            </div>
+          </div>
+
+          <!-- Start Button -->
+          <button class="start-match-btn" id="startMatchBtn">
+            <span class="start-icon">▶</span>
+            <span>INICIAR PARTIDO</span>
+          </button>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         PHASE 2: IN-GAME
+         ═══════════════════════════════════════════════════════════ -->
+    <div id="gameScreen" class="sim-phase" style="display:none;">
+      <div class="game-container">
+        
+        <!-- Left Sidebar: RED Alliance -->
+        <aside class="game-sidebar red">
+          <div class="sidebar-header red">
+            <span class="alliance-dot">🔴</span>
+            <h2>RED ALLIANCE</h2>
+          </div>
+          
+          <div class="sidebar-main-score red">
+            <div class="sidebar-score-val" id="gsRedScore">0</div>
+            <div class="sidebar-score-lbl">PUNTOS REGIONALES</div>
+          </div>
+          
+          <div class="sidebar-stats-list">
+            <div class="sidebar-stat-item">
+              <span>Supresión Red</span>
+              <strong id="gsRedSup">0</strong>
+            </div>
+            <div class="sidebar-stat-item">
+              <span>Cola Human Player</span>
+              <strong id="gsRedHPQueue">0</strong>
+            </div>
+            <div class="sidebar-stat-item">
+              <span>Dificultad Bots</span>
+              <strong id="gsRedBotDiff">Media</strong>
+            </div>
+          </div>
+          
+          <div class="sidebar-divider"></div>
+          
+          <div class="player-hud-card">
+            <h3 id="p1Header">👤 JUGADOR 1 (WASD)</h3>
+            <div class="hud-field">
+              <span class="hud-lbl">Inventario</span>
+              <span class="hud-val" id="hudRedInv">0 / 12</span>
+            </div>
+            <div class="hud-field">
+              <span class="hud-lbl">Linear Motion</span>
+              <span class="hud-val" id="hudRedLinear" style="color: #38bdf8;">📦 Retraído [30%]</span>
+            </div>
+            <div class="hud-field">
+              <span class="hud-lbl">Gancho</span>
+              <span class="hud-val" id="hudRedHook">Libre</span>
+            </div>
+            <div class="hud-field">
+              <span class="hud-lbl">Estado</span>
+              <span class="hud-val" id="hudRedStatus">Quieto</span>
+            </div>
+            <div class="controls-kbd">
+              <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Mover &nbsp; <kbd>B</kbd> Recoger &nbsp; <kbd>SPACE</kbd> Lanzar<br>
+              <kbd>E</kbd> / <kbd>Q</kbd> Linear Ext/Ret &nbsp; <kbd>R</kbd> / <kbd>F</kbd> Gancho Subir/Bajar &nbsp; <kbd>V</kbd> Escalar<br>
+              <div style="margin-top: 4px; color: #38bdf8; font-size: 0.58rem;">
+                🎮 <b>Mando:</b> ✕ Lanzar | ○ Recoger | ◄► Linear | ▲▼ Gancho | R2/L2 Subir
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Center Arena -->
+        <main class="game-center">
+          <div class="center-top-bar">
+            <div class="center-ext-score">🧯 Extinguidor: <strong id="gsExtScore">0</strong></div>
+            <div class="center-timer-container" style="display: flex; align-items: center; gap: 8px;">
+              <div class="center-timer" id="gsTimer">2:30</div>
+              <button id="btnSpeedToggle" class="speed-toggle-btn" title="Velocidad del Tiempo">⚡ 1x</button>
+              <button id="btnEndMatch" class="end-match-toggle-btn" title="Terminar Partido">⏹ Terminar</button>
+              <button id="btnHudGamepad" class="hud-gamepad-btn" title="Configurar Mando">🎮</button>
+            </div>
+            <div class="center-field-balls">🔥 En Campo: <strong id="hudFieldBalls">500</strong></div>
+          </div>
+          
+          <div class="game-canvas-wrapper">
+            <canvas id="gameCanvas"></canvas>
+            
+            <!-- Countdown Overlay -->
+            <div class="countdown-overlay" id="countdownOverlay" style="display:none;">
+              <div class="countdown-number" id="countdownNumber">3</div>
+            </div>
+          </div>
+        </main>
+
+        <!-- Right Sidebar: BLUE Alliance -->
+        <aside class="game-sidebar blue">
+          <div class="sidebar-header blue">
+            <h2>BLUE ALLIANCE</h2>
+            <span class="alliance-dot">🔵</span>
+          </div>
+          
+          <div class="sidebar-main-score blue">
+            <div class="sidebar-score-val" id="gsBlueScore">0</div>
+            <div class="sidebar-score-lbl">PUNTOS REGIONALES</div>
+          </div>
+          
+          <div class="sidebar-stats-list">
+            <div class="sidebar-stat-item">
+              <span>Supresión Blue</span>
+              <strong id="gsBlueSup">0</strong>
+            </div>
+            <div class="sidebar-stat-item">
+              <span>Cola Human Player</span>
+              <strong id="gsBlueHPQueue">0</strong>
+            </div>
+            <div class="sidebar-stat-item">
+              <span>Dificultad Bots</span>
+              <strong id="gsBlueBotDiff">Media</strong>
+            </div>
+          </div>
+          
+          <div class="sidebar-divider"></div>
+          
+          <div class="player-hud-card">
+            <h3 id="p2Header">👥 JUGADOR 2 (ARROWS)</h3>
+            <div class="hud-field">
+              <span class="hud-lbl">Inventario</span>
+              <span class="hud-val" id="hudBlueInv">0 / 12</span>
+            </div>
+            <div class="hud-field">
+              <span class="hud-lbl">Linear Motion</span>
+              <span class="hud-val" id="hudBlueLinear" style="color: #38bdf8;">📦 Retraído [30%]</span>
+            </div>
+            <div class="hud-field">
+              <span class="hud-lbl">Gancho</span>
+              <span class="hud-val" id="hudBlueHook">Libre</span>
+            </div>
+            <div class="hud-field">
+              <span class="hud-lbl">Estado</span>
+              <span class="hud-val" id="hudBlueStatus">Quieto</span>
+            </div>
+            <div class="controls-kbd" id="p2ControlsKbd">
+              <kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> Mover &nbsp; <kbd>O</kbd> Recoger &nbsp; <kbd>Ñ</kbd> Lanzar<br>
+              <kbd>I</kbd> / <kbd>U</kbd> Linear Ext/Ret &nbsp; <kbd>K</kbd> / <kbd>J</kbd> Gancho Subir/Bajar &nbsp; <kbd>P</kbd> Escalar<br>
+              <div style="margin-top: 4px; color: #38bdf8; font-size: 0.58rem;">
+                🎮 <b>Mando 2:</b> ✕ Lanzar | ○ Recoger | ◄► Linear | ▲▼ Gancho | R2/L2 Subir
+              </div>
+            </div>
+          </div>
+        </aside>
+        
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         PHASE 3: RESULTS
+         ═══════════════════════════════════════════════════════════ -->
+    <div id="resultsScreen" class="sim-phase" style="display:none;">
+      <div class="results-container">
+        <div class="results-header">
+          <div class="results-title">✨ RESULTADO FINAL ✨</div>
+        </div>
+
+        <div class="results-scores">
+          <div class="result-alliance red">
+            <div class="result-label">RED ALLIANCE</div>
+            <div class="result-score" id="resultRedScore">0</div>
+            <div class="result-breakdown">
+              <div class="rb-item"><span>Supresión</span><strong id="rbRedSup">0</strong></div>
+              <div class="rb-item"><span>×Multiplicador</span><strong id="rbRedMult">1.00</strong></div>
+              <div class="rb-item"><span>Regional</span><strong id="rbRedRegional">0</strong></div>
+            </div>
+          </div>
+          <div class="result-vs">
+            <div class="result-vs-badge">VS</div>
+            <div class="result-global">
+              <div class="rg-item">🧯 Extinguidor: <strong id="rbExtTotal">0</strong></div>
+            </div>
+          </div>
+          <div class="result-alliance blue">
+            <div class="result-label">BLUE ALLIANCE</div>
+            <div class="result-score" id="resultBlueScore">0</div>
+            <div class="result-breakdown">
+              <div class="rb-item"><span>Supresión</span><strong id="rbBlueSup">0</strong></div>
+              <div class="rb-item"><span>×Multiplicador</span><strong id="rbBlueMult">1.00</strong></div>
+              <div class="rb-item"><span>Regional</span><strong id="rbBlueRegional">0</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Player Stats -->
+        <div class="player-stats-card">
+          <h3>📊 TUS ESTADÍSTICAS</h3>
+          <div class="ps-grid">
+            <div class="ps-item"><span>Pelotas Recogidas</span><strong id="psPickedUp">0</strong></div>
+            <div class="ps-item"><span>Pelotas Disparadas</span><strong id="psShot">0</strong></div>
+            <div class="ps-item"><span>Aciertos</span><strong id="psHits">0</strong></div>
+            <div class="ps-item"><span>Fallos</span><strong id="psMisses">0</strong></div>
+            <div class="ps-item"><span>Precisión Real</span><strong id="psAccuracy">0%</strong></div>
+            <div class="ps-item"><span>Distancia Recorrida</span><strong id="psDistance">0 m</strong></div>
+          </div>
+        </div>
+
+        <div class="results-actions">
+          <button class="result-btn primary" id="playAgainBtn">▶ Jugar Otra Vez</button>
+          <button class="result-btn secondary" id="goCalcBtn">📋 Ir a Calculadora</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         GAMEPAD MAPPING MODAL
+         ═══════════════════════════════════════════════════════════ -->
+    <div class="modal-overlay" id="gamepadModal" style="display:none;">
+      <div class="gamepad-modal-content">
+        <div class="modal-header">
+          <div class="modal-title">
+            <span class="modal-icon">🎮</span>
+            <div>
+              <h2>MAPEO DE MANDO PLAYSTATION</h2>
+              <span class="modal-subtitle">Conexión USB / Bluetooth y asignación de botones</span>
+            </div>
+          </div>
+          <button class="modal-close-btn" id="closeGamepadModalBtn" title="Cerrar">&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Driver Tabs Navigation -->
+          <div class="gp-tab-nav">
+            <button type="button" class="gp-tab-btn active" id="gpTabDriver1" data-driver="1">
+              🎮 Driver 1 (Jugador 1)
+            </button>
+            <button type="button" class="gp-tab-btn" id="gpTabDriver2" data-driver="2">
+              🎮 Driver 2 (Jugador 2)
+            </button>
+          </div>
+
+          <!-- Device Info Banner -->
+          <div class="gp-device-banner" id="gpDeviceBanner">
+            <div class="gp-device-icon">🎮</div>
+            <div class="gp-device-details">
+              <strong id="modalGpDeviceName">Buscando mando...</strong>
+              <span id="modalGpDeviceStatus">Conecta tu mando por USB/Bluetooth y pulsa cualquier botón para activarlo.</span>
+            </div>
+            <div class="gp-device-pill disconnected" id="modalGpPill">Desconectado</div>
+          </div>
+
+          <!-- Player Assign Setting -->
+          <div class="modal-group">
+            <div class="modal-group-title">
+              <span>👤 ASIGNACIÓN DEL DISPOSITIVO FÍSICO</span>
+              <span class="group-hint">Selecciona qué mando USB/Bluetooth corresponde a este Driver</span>
+            </div>
+            <div class="toggle-group" id="gpDeviceSelectToggle">
+              <button class="toggle-btn active" data-value="0">🎮 Mando USB #1</button>
+              <button class="toggle-btn" data-value="1">🎮 Mando USB #2</button>
+              <button class="toggle-btn" data-value="-1">❌ Desactivado</button>
+            </div>
+          </div>
+
+          <!-- Live Interactive Tester -->
+          <div class="modal-group">
+            <div class="modal-group-title">
+              <span>🕹️ MONITOR DE ENTRADAS EN VIVO (SPLIT-ARCADE DRIVE)</span>
+              <span class="group-hint">Prueba los dos sticks y botones en tiempo real</span>
+            </div>
+            <div class="gp-live-tester" id="gpLiveTester">
+              <div class="gp-sticks-row">
+                <div class="gp-stick-preview">
+                  <div class="gp-stick-base">
+                    <div class="gp-stick-thumb" id="gpStickThumbL"></div>
+                  </div>
+                  <span class="gp-stick-label">Stick Izq (Avance / Atrás)</span>
+                </div>
+                <div class="gp-stick-preview">
+                  <div class="gp-stick-base">
+                    <div class="gp-stick-thumb" id="gpStickThumbR"></div>
+                  </div>
+                  <span class="gp-stick-label">Stick Der (Giro Izq / Der)</span>
+                </div>
+              </div>
+              <div class="gp-buttons-grid" id="gpButtonsGrid">
+                <!-- Dynamically updated badge buttons -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions Mapping Table -->
+          <div class="modal-group">
+            <div class="modal-group-title">
+              <span>⚙️ MAPEO DE ACCIONES Y MECANISMOS</span>
+              <span class="group-hint">Haz clic en 'Reasignar' y luego presiona el botón deseado en el mando</span>
+            </div>
+            <div class="gp-actions-list" id="gpActionsList">
+              <!-- Dynamically populated rows for shooter, pickup, linear, climber, etc. -->
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="gp-footer-btn secondary" id="resetGamepadBtn">
+            ↺ Restablecer (PlayStation Defecto)
+          </button>
+          <button type="button" class="gp-footer-btn primary" id="saveGamepadBtn">
+            ✓ Guardar y Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Footer ═══ -->
+    <footer class="app-footer">
+      <p>&copy; 2026 Fundación Team Colombia de Educación e Innovación Educativa — Simulador táctico FGC Incheon</p>
+    </footer>
+  </div>
+
+  <script src="supabase-client.js"></script>
+  <script src="chatbot.js"></script>
+  <script src="simulacion.js"></script>
+</body>
+</html>

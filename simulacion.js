@@ -1,0 +1,3580 @@
+/* ═══════════════════════════════════════════════════════════════
+   FGC 2026 REAL-TIME SIMULATION ENGINE — Team Colombia
+   Igniting Innovation — 2D Top-Down Game
+   ═══════════════════════════════════════════════════════════════ */
+
+// ── 1. CONSTANTS ────────────────────────────────────────────────
+const FIELD_M = 7;          // Field size in meters
+const CANVAS_BASE = 700;    // Base canvas pixels
+const MATCH_DURATION = 150; // 2:30 in seconds
+const S = cEl => parseFloat(cEl.style.width) || cEl.width;
+const TOTAL_BALLS = 500;
+const BALL_RADIUS_M = 0.05; // 50mm radius (10cm diameter)
+const ROBOT_SIZE_M = 0.50;  // 50cm side (official size)
+const PICKUP_RANGE_M = 0.62;
+const SHOOT_BALL_SPEED = 6; // m/s for flying balls
+const FRICTION = 0.96;
+const BALL_PUSH_FORCE = 0.8;
+const HP_RATE = 0.8;        // Human player processes 1 ball per ~1.25s
+
+// Official Incheon 2026 field zones (origin top-left)
+const ZONES = {
+  // Suppression units directly to the sides of the central Extinguisher
+  supRed:    { x: 1.6,  y: 0.0,  w: 1.2, h: 0.7 },
+  supBlue:   { x: 4.2,  y: 0.0,  w: 1.2, h: 0.7 },
+  extinguisher: { x: 2.8, y: 0.0, w: 1.4, h: 0.7 },
+  // Smaller fire shields at the bottom corners
+  fireShieldRed:  { x: 0.0,   y: 6.4, w: 0.6, h: 0.6 },
+  fireShieldBlue: { x: 6.4,   y: 6.4, w: 0.6, h: 0.6 },
+  shootRedZone:   { x: 0.0,   y: 0.2, w: 1.8, h: 2.0 },
+  shootBlueZone:  { x: 5.2,   y: 0.2, w: 1.8, h: 2.0 },
+  shootRedExtension: { x: 1.8, y: 0.7, w: 1.0, h: 0.9 },
+  shootBlueExtension: { x: 4.2, y: 0.7, w: 1.0, h: 0.9 },
+  fsRedZone:      { x: 0.0,   y: 5.8, w: 0.9, h: 1.2 },
+  fsBlueZone:     { x: 6.1,   y: 5.8, w: 0.9, h: 1.2 },
+};
+
+// Official diagonal braces layout (starts outside fire shields, converges at extinguisher)
+const BRACES = {
+  red: { startX: 0.9, startY: 6.8, endX: 2.8, endY: 0.7 },
+  blue: { startX: 6.1, startY: 6.8, endX: 4.2, endY: 0.7 }
+};
+const BRACE_LENGTH = Math.sqrt(
+  (BRACES.red.endX - BRACES.red.startX) ** 2 +
+  (BRACES.red.endY - BRACES.red.startY) ** 2
+);
+
+const CLIMB_VALUES = { none: 0, contact: 0.05, z1: 0.10, z2: 0.20, z3: 0.30 };
+
+const OBSTACLES = [
+  { x: 1.6,  y: 0.0,  w: 1.2, h: 0.7 }, // supRed
+  { x: 4.2,  y: 0.0,  w: 1.2, h: 0.7 }, // supBlue
+  { x: 2.8,  y: 0.0,  w: 1.4, h: 0.7 }, // extinguisher
+  { x: 0.0,  y: 6.4,  w: 0.6, h: 0.6 }, // fireShieldRed
+  { x: 6.4,  y: 6.4,  w: 0.6, h: 0.6 }  // fireShieldBlue
+];
+
+function resolveObstacleCollision(obj, radius, isBall = false) {
+  OBSTACLES.forEach(obs => {
+    const px = Math.max(obs.x, Math.min(obj.x, obs.x + obs.w));
+    const py = Math.max(obs.y, Math.min(obj.y, obs.y + obs.h));
+    
+    const dx = obj.x - px;
+    const dy = obj.y - py;
+    const dist = Math.hypot(dx, dy);
+    
+    if (dist < radius) {
+      let nx = 0, ny = 0;
+      let overlap = 0;
+      
+      if (dist > 0.0001) {
+        nx = dx / dist;
+        ny = dy / dist;
+        overlap = radius - dist;
+      } else {
+        const dl = obj.x - obs.x;
+        const dr = (obs.x + obs.w) - obj.x;
+        const dt = obj.y - obs.y;
+        const db = (obs.y + obs.h) - obj.y;
+        
+        const minVal = Math.min(dl, dr, dt, db);
+        if (minVal === dl) { nx = -1; overlap = radius + dl; }
+        else if (minVal === dr) { nx = 1; overlap = radius + dr; }
+        else if (minVal === dt) { ny = -1; overlap = radius + dt; }
+        else { ny = 1; overlap = radius + db; }
+      }
+      
+      obj.x += nx * overlap;
+      obj.y += ny * overlap;
+      
+      if (isBall) {
+        const velDotNormal = obj.vx * nx + obj.vy * ny;
+        if (velDotNormal < 0) {
+          obj.vx = (obj.vx - 2 * velDotNormal * nx) * 0.5;
+          obj.vy = (obj.vy - 2 * velDotNormal * ny) * 0.5;
+        }
+      }
+    }
+  });
+}
+
+function resolveRobotCollisions() {
+  const minClimbTDiff = ROBOT_SIZE_M / BRACE_LENGTH;
+
+  // 1. Resolve collisions between climbing robots on the same brace
+  ['red', 'blue'].forEach(alliance => {
+    const climbers = robots.filter(r => r.alliance === alliance && r.state === 'climbing');
+    if (climbers.length > 1) {
+      // Sort by climbT
+      climbers.sort((a, b) => a.climbT - b.climbT);
+      
+      // Run a few passes to resolve multi-robot overlaps
+      for (let pass = 0; pass < 3; pass++) {
+        for (let i = 1; i < climbers.length; i++) {
+          const prev = climbers[i - 1];
+          const curr = climbers[i];
+          if (curr.climbT - prev.climbT < minClimbTDiff) {
+            const overlap = minClimbTDiff - (curr.climbT - prev.climbT);
+            // Push them apart
+            prev.climbT = Math.max(0.0, prev.climbT - overlap / 2);
+            curr.climbT = Math.min(1.0, curr.climbT + overlap / 2);
+            
+            // Adjust bounds
+            if (prev.climbT === 0.0) {
+              curr.climbT = minClimbTDiff;
+            }
+            if (curr.climbT === 1.0) {
+              prev.climbT = 1.0 - minClimbTDiff;
+            }
+          }
+        }
+      }
+      
+      // Update coordinates for all climbers after adjustment
+      climbers.forEach(r => {
+        const brace = BRACES[r.alliance];
+        r.x = brace.startX + (brace.endX - brace.startX) * r.climbT;
+        r.y = brace.startY + (brace.endY - brace.startY) * r.climbT;
+      });
+    }
+  });
+
+  // 2. Resolve collisions between robots on the ground
+  // If either robot is climbing (elevated on the rampa), ground robots can pass underneath freely!
+  for (let pass = 0; pass < 4; pass++) {
+    for (let i = 0; i < robots.length; i++) {
+      for (let j = i + 1; j < robots.length; j++) {
+        const r1 = robots[i];
+        const r2 = robots[j];
+        
+        // If either robot is climbing/elevated, skip collision so ground robots pass underneath!
+        if (r1.state === 'climbing' || r2.state === 'climbing') continue;
+        
+        const dx = r2.x - r1.x;
+        const dy = r2.y - r1.y;
+        const dist = Math.hypot(dx, dy);
+        const minDist = ROBOT_SIZE_M;
+        
+        if (dist < minDist) {
+          const overlap = minDist - dist;
+          const nx = dist > 0.0001 ? dx / dist : (Math.random() - 0.5 || 1);
+          const ny = dist > 0.0001 ? dy / dist : 0;
+          
+          // Both are on the field, push both equally
+          r1.x -= nx * (overlap / 2);
+          r1.y -= ny * (overlap / 2);
+          r2.x += nx * (overlap / 2);
+          r2.y += ny * (overlap / 2);
+          
+          // Re-clamp field robots to boundaries
+          const half = ROBOT_SIZE_M / 2;
+          if (r1.state !== 'climbing') {
+            r1.x = Math.max(half, Math.min(FIELD_M - half, r1.x));
+            r1.y = Math.max(half, Math.min(FIELD_M - half, r1.y));
+            // Apply obstacle collision immediately to stay out of obstacles
+            resolveObstacleCollision(r1, half);
+          }
+          if (r2.state !== 'climbing') {
+            r2.x = Math.max(half, Math.min(FIELD_M - half, r2.x));
+            r2.y = Math.max(half, Math.min(FIELD_M - half, r2.y));
+            resolveObstacleCollision(r2, half);
+          }
+        }
+      }
+    }
+  }
+}
+
+// Colors
+const COL = {
+  fieldBg: '#0a0c14',
+  gridLine: 'rgba(255,255,255,0.015)',
+  ball: '#ff8c28',
+  ballFlying: '#ffb347',
+  redBot: '#e83048',
+  redBotLight: '#ff5e6f',
+  blueBot: '#3377ff',
+  blueBotLight: '#5c9aff',
+  playerHighlight: '#ffd700',
+  supRed: 'rgba(232,48,72,0.12)',
+  supBlue: 'rgba(51,119,255,0.12)',
+  extZone: 'rgba(255,215,0,0.08)',
+  fsRed: 'rgba(232,48,72,0.06)',
+  fsBlue: 'rgba(51,119,255,0.06)',
+};
+
+// ── 2. RETRO SOUND EFFECTS (Web Audio API Synthesizer) ───────────
+let audioCtx = null;
+function playSound(type) {
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!audioCtx) audioCtx = new AudioContextClass();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    osc.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    const now = audioCtx.currentTime;
+    
+    if (type === 'pickup') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(600, now);
+      osc.frequency.exponentialRampToValueAtTime(1000, now + 0.08);
+      gainNode.gain.setValueAtTime(0.08, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      osc.start(now);
+      osc.stop(now + 0.08);
+    } else if (type === 'shoot') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(320, now);
+      osc.frequency.exponentialRampToValueAtTime(60, now + 0.15);
+      gainNode.gain.setValueAtTime(0.12, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } else if (type === 'score') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523.25, now); // C5
+      osc.frequency.setValueAtTime(659.25, now + 0.07); // E5
+      gainNode.gain.setValueAtTime(0.06, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      osc.start(now);
+      osc.stop(now + 0.25);
+    } else if (type === 'extinguisher') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1568, now); // G6
+      gainNode.gain.setValueAtTime(0.06, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      osc.start(now);
+      osc.stop(now + 0.35);
+    } else if (type === 'climb') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(55, now);
+      gainNode.gain.setValueAtTime(0.03, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+      osc.start(now);
+      osc.stop(now + 0.05);
+    } else if (type === 'countdown') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(440, now);
+      gainNode.gain.setValueAtTime(0.08, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } else if (type === 'trumpet') {
+      // Retro synth trumpet warning fanfare
+      const notes = [587.33, 587.33, 783.99]; // D5, D5, G5
+      const startTimes = [now, now + 0.12, now + 0.24];
+      const durations = [0.1, 0.1, 0.35];
+      
+      notes.forEach((freq, idx) => {
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(freq, startTimes[idx]);
+        o.frequency.exponentialRampToValueAtTime(freq * 1.02, startTimes[idx] + durations[idx]);
+        
+        g.gain.setValueAtTime(0.0, startTimes[idx]);
+        g.gain.linearRampToValueAtTime(0.06, startTimes[idx] + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, startTimes[idx] + durations[idx]);
+        
+        o.connect(g);
+        g.connect(audioCtx.destination);
+        o.start(startTimes[idx]);
+        o.stop(startTimes[idx] + durations[idx]);
+      });
+      return;
+    } else if (type === 'go') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, now);
+      gainNode.gain.setValueAtTime(0.12, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      osc.start(now);
+      osc.stop(now + 0.4);
+    } else if (type === 'game_over') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.linearRampToValueAtTime(60, now + 0.6);
+      gainNode.gain.setValueAtTime(0.1, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+      osc.start(now);
+      osc.stop(now + 0.6);
+    }
+  } catch (e) {
+    console.warn("Sound failed to play:", e);
+  }
+}
+
+// ── 3. ROBOT TEXTURES LOADING ────────────────────────────────────
+const ROBOT_IMAGES = {
+  colombia: new Image(),
+  ally: new Image(),
+  rival: new Image()
+};
+ROBOT_IMAGES.colombia.src = 'robot_colombia.png';
+ROBOT_IMAGES.ally.src = 'robot_ally.png';
+ROBOT_IMAGES.rival.src = 'robot_rival.png';
+
+const ROBOT_TEXTURES = {
+  colombia: null,
+  ally: null,
+  rival: null
+};
+
+function processTexture(img, key) {
+  const canvas = document.createElement('canvas');
+  canvas.width = img.naturalWidth || img.width;
+  canvas.height = img.naturalHeight || img.height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  try {
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imgData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i+1];
+      const b = data[i+2];
+      if (r < 20 && g < 20 && b < 20) {
+        data[i+3] = 0; // Set transparent
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+    const processed = new Image();
+    processed.src = canvas.toDataURL();
+    processed.onload = () => {
+      ROBOT_TEXTURES[key] = processed;
+      if (gamePhase === 'setup') renderSetupPreview();
+    };
+  } catch (e) {
+    console.warn("Dynamic texture transparency failed, using fallback:", e);
+    ROBOT_TEXTURES[key] = img;
+    if (gamePhase === 'setup') renderSetupPreview();
+  }
+}
+
+ROBOT_IMAGES.colombia.onload = () => {
+  processTexture(ROBOT_IMAGES.colombia, 'colombia');
+  if (gamePhase === 'setup') renderSetupPreview();
+};
+ROBOT_IMAGES.ally.onload = () => {
+  processTexture(ROBOT_IMAGES.ally, 'ally');
+  if (gamePhase === 'setup') renderSetupPreview();
+};
+ROBOT_IMAGES.rival.onload = () => {
+  processTexture(ROBOT_IMAGES.rival, 'rival');
+  if (gamePhase === 'setup') renderSetupPreview();
+};
+
+// ── 4. GAME STATE ───────────────────────────────────────────────
+let gamePhase = 'setup'; // 'setup' | 'countdown' | 'playing' | 'ended'
+let matchTime = MATCH_DURATION;
+let matchInterval = null;
+let lastClimbSoundTime = 0;
+let timeSpeed = 1;
+let trumpetPlayed = false;
+
+// Configuration (from setup UI)
+const CONFIG = {
+  alliance: 'red',
+  teamNumber: 1,
+  specs: {
+    moveSpeed: 1.5,
+    pickupSpeed: 2.0,
+    shotSpeed: 3.0,
+    capacity: 12,
+    accuracy: 80,
+    climbSpeed: 0.5,
+    climbAnchorTime: 2.0,
+  },
+  linearMotionRobots: 1, // Number of robots with expandable linear motion (0 to 6)
+  gameMode: 1, // 1 = Solo, 2 = 2 Players Coop
+  coopRelation: 'teammates', // 'teammates' | 'rivals'
+  allyMultiplier: 0.8,
+  rivalMultiplier: 0.8,
+  hpAccuracy: 70,
+};
+
+// Score tracking
+const SCORE = {
+  redSup: 0,
+  blueSup: 0,
+  extinguisher: 0,
+};
+
+// Player statistics
+const PLAYER_STATS = {
+  pickedUp: 0,
+  shot: 0,
+  hits: 0,
+  misses: 0,
+  distance: 0,
+};
+
+const PLAYER2_STATS = {
+  pickedUp: 0,
+  shot: 0,
+  hits: 0,
+  misses: 0,
+  distance: 0,
+};
+
+// Input state
+const KEYS = {};
+window.addEventListener('keydown', e => {
+  const key = e.key.toLowerCase();
+  KEYS[key] = true;
+  if (e.key === ' ' || key.startsWith('arrow')) {
+    e.preventDefault();
+  }
+});
+window.addEventListener('keyup', e => {
+  KEYS[e.key.toLowerCase()] = false;
+});
+
+// ── 4.5 GAMEPAD & PLAYSTATION CONTROLLER SYSTEM (DUAL DRIVER) ─────
+const PS_BUTTONS = {
+  0: { label: '✕ Cruz (Cross)', short: '✕', css: 'ps-cross' },
+  1: { label: '○ Círculo (Circle)', short: '○', css: 'ps-circle' },
+  2: { label: '□ Cuadrado (Square)', short: '□', css: 'ps-square' },
+  3: { label: '△ Triángulo (Triangle)', short: '△', css: 'ps-triangle' },
+  4: { label: 'L1 (Bumper Izq)', short: 'L1', css: 'ps-bumper' },
+  5: { label: 'R1 (Bumper Der)', short: 'R1', css: 'ps-bumper' },
+  6: { label: 'L2 (Gatillo Izq)', short: 'L2', css: 'ps-trigger' },
+  7: { label: 'R2 (Gatillo Der)', short: 'R2', css: 'ps-trigger' },
+  8: { label: 'Share / Create', short: 'Share', css: 'ps-sys' },
+  9: { label: 'Options / Start', short: 'Options', css: 'ps-sys' },
+  10: { label: 'L3 (Stick Izq Click)', short: 'L3', css: 'ps-stick' },
+  11: { label: 'R3 (Stick Der Click)', short: 'R3', css: 'ps-stick' },
+  12: { label: 'D-Pad Arriba', short: '▲ Arriba', css: 'ps-dpad' },
+  13: { label: 'D-Pad Abajo', short: '▼ Abajo', css: 'ps-dpad' },
+  14: { label: 'D-Pad Izquierda', short: '◄ Izq', css: 'ps-dpad' },
+  15: { label: 'D-Pad Derecha', short: '► Der', css: 'ps-dpad' },
+  16: { label: 'PS (Home)', short: 'PS', css: 'ps-sys' },
+  17: { label: 'Touchpad', short: 'Touchpad', css: 'ps-sys' }
+};
+
+const DEFAULT_GAMEPADS_CONFIG = {
+  1: {
+    deviceIndex: 0,
+    deadzone: 0.18,
+    mappings: {
+      shoot: 0,         // ✕ Cruz (Disparo único)
+      pickup: 1,        // ○ Círculo (Recolección)
+      linearDeploy: 15, // ► D-Pad Der (Desplegar Linear Motion 100%)
+      linearRetract: 14,// ◄ D-Pad Izq (Retraer Linear Motion 30%)
+      hookRaise: 12,    // ▲ D-Pad Arriba (Subir Gancho de Escalada)
+      hookLower: 13,    // ▼ D-Pad Abajo (Bajar / Anclar Gancho en Brace)
+      climbAdvance: 7,  // R2 Gatillo Der (Avance en Rampa)
+      climbReverse: 6,  // L2 Gatillo Izq (Retroceso en Rampa)
+    }
+  },
+  2: {
+    deviceIndex: 1,
+    deadzone: 0.18,
+    mappings: {
+      shoot: 0,         // ✕ Cruz (Disparo único)
+      pickup: 1,        // ○ Círculo (Recolección)
+      linearDeploy: 15, // ► D-Pad Der (Desplegar Linear Motion 100%)
+      linearRetract: 14,// ◄ D-Pad Izq (Retraer Linear Motion 30%)
+      hookRaise: 12,    // ▲ D-Pad Arriba (Subir Gancho de Escalada)
+      hookLower: 13,    // ▼ D-Pad Abajo (Bajar / Anclar Gancho en Brace)
+      climbAdvance: 7,  // R2 Gatillo Der (Avance en Rampa)
+      climbReverse: 6,  // L2 Gatillo Izq (Retroceso en Rampa)
+    }
+  }
+};
+
+const GAMEPAD_ACTIONS = [
+  { id: 'shoot', name: 'Disparar / Lanzar (Shooter)', desc: 'Dispara pelotas hacia Suppression Unit o Fire Shield', defaultBtn: 0 },
+  { id: 'pickup', name: 'Recoger Pelotas (Intake)', desc: 'Recoge pelotas cercanas en el suelo del campo', defaultBtn: 1 },
+  { id: 'linearDeploy', name: 'Linear Motion: Desplegar (100%)', desc: 'Expande la cámara trasera desbloqueando el 100% de almacenamiento', defaultBtn: 15 },
+  { id: 'linearRetract', name: 'Linear Motion: Retraer (30%)', desc: 'Repliega la cámara trasera (bloqueado si hay >30% de capacidad ocupada)', defaultBtn: 14 },
+  { id: 'hookRaise', name: 'Gancho Climber: Subir Gancho', desc: 'Despliega el gancho verticalmente hacia arriba para encarar el brace', defaultBtn: 12 },
+  { id: 'hookLower', name: 'Gancho Climber: Bajar / Anclar', desc: 'Baja el gancho haciendo fricción para anclarse firmemente al brace', defaultBtn: 13 },
+  { id: 'climbAdvance', name: 'Climber: Avance en Rampa (Subir)', desc: 'Sube por la rampa diagonal hacia las zonas altas', defaultBtn: 7 },
+  { id: 'climbReverse', name: 'Climber: Retroceso en Rampa (Bajar)', desc: 'Baja por la rampa diagonal hacia la base', defaultBtn: 6 },
+];
+
+let GAMEPADS_CONFIG = JSON.parse(JSON.stringify(DEFAULT_GAMEPADS_CONFIG));
+let activeModalDriverTab = 1; // 1: Driver 1, 2: Driver 2
+let listeningRebindAction = null;
+
+function loadGamepadConfig() {
+  try {
+    const saved = localStorage.getItem('fgc_2026_gamepads_config');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed[1]) {
+        GAMEPADS_CONFIG[1] = Object.assign({}, DEFAULT_GAMEPADS_CONFIG[1], parsed[1]);
+        GAMEPADS_CONFIG[1].mappings = Object.assign({}, DEFAULT_GAMEPADS_CONFIG[1].mappings, parsed[1].mappings);
+      }
+      if (parsed[2]) {
+        GAMEPADS_CONFIG[2] = Object.assign({}, DEFAULT_GAMEPADS_CONFIG[2], parsed[2]);
+        GAMEPADS_CONFIG[2].mappings = Object.assign({}, DEFAULT_GAMEPADS_CONFIG[2].mappings, parsed[2].mappings);
+      }
+    }
+  } catch (e) {
+    console.warn('Error loading gamepads config:', e);
+  }
+}
+
+function saveGamepadConfig() {
+  try {
+    localStorage.setItem('fgc_2026_gamepads_config', JSON.stringify(GAMEPADS_CONFIG));
+  } catch (e) {
+    console.warn('Error saving gamepads config:', e);
+  }
+}
+
+function getConnectedGamepadsList() {
+  const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+  const list = [];
+  if (gamepads) {
+    for (let i = 0; i < gamepads.length; i++) {
+      if (gamepads[i] && gamepads[i].connected) {
+        list.push(gamepads[i]);
+      }
+    }
+  }
+  return list;
+}
+
+function getActiveGamepad(driverNum = 1) {
+  const connected = getConnectedGamepadsList();
+  if (connected.length === 0) return null;
+
+  const cfg = GAMEPADS_CONFIG[driverNum];
+  if (!cfg || cfg.deviceIndex === -1) return null;
+
+  // Exact index assignment or smart fallback
+  if (cfg.deviceIndex >= 0 && cfg.deviceIndex < connected.length) {
+    return connected[cfg.deviceIndex];
+  }
+  if (driverNum === 1 && connected.length > 0) return connected[0];
+  if (driverNum === 2 && connected.length > 1) return connected[1];
+  return null;
+}
+
+function isGamepadButtonPressed(gp, btnIndex) {
+  if (!gp || !gp.buttons || btnIndex === undefined || btnIndex === null) return false;
+  const btn = gp.buttons[btnIndex];
+  if (!btn) return false;
+  return typeof btn === 'object' ? (btn.pressed || btn.value > 0.35) : btn > 0.35;
+}
+
+function isGamepadActionActive(actionId, driverNum = 1) {
+  const gp = getActiveGamepad(driverNum);
+  if (!gp) return false;
+  const cfg = GAMEPADS_CONFIG[driverNum];
+  if (!cfg || !cfg.mappings) return false;
+  const btnIndex = cfg.mappings[actionId];
+  return isGamepadButtonPressed(gp, btnIndex);
+}
+
+function getGamepadArcadeInputs(driverNum = 1) {
+  const gp = getActiveGamepad(driverNum);
+  const result = {
+    throttle: 0,
+    steering: 0,
+    leftStick: { x: 0, y: 0, mag: 0 },
+    rightStick: { x: 0, y: 0, mag: 0 }
+  };
+  if (!gp) return result;
+
+  const cfg = GAMEPADS_CONFIG[driverNum] || DEFAULT_GAMEPADS_CONFIG[1];
+  const deadzone = cfg.deadzone || 0.18;
+
+  // 1. Left Stick: ONLY LY (Axes 1) for Forward / Backward Throttle
+  if (gp.axes && gp.axes.length >= 2) {
+    const lx = gp.axes[0];
+    const ly = gp.axes[1];
+    // Keep raw values for modal visual stick tester
+    result.leftStick.x = Math.abs(lx) > deadzone ? lx : 0;
+    
+    if (Math.abs(ly) > deadzone) {
+      const normY = Math.sign(ly) * Math.min(1.0, (Math.abs(ly) - deadzone) / (1.0 - deadzone));
+      result.leftStick.y = normY;
+      result.leftStick.mag = Math.abs(normY);
+    }
+  }
+
+  // 2. Right Stick: ONLY RX (Axes 2) for Left / Right Steering
+  if (gp.axes && gp.axes.length >= 3) {
+    const rx = gp.axes[2];
+    const ry = gp.axes.length >= 4 ? gp.axes[3] : 0;
+    result.rightStick.y = Math.abs(ry) > deadzone ? ry : 0;
+    
+    if (Math.abs(rx) > deadzone) {
+      const normX = Math.sign(rx) * Math.min(1.0, (Math.abs(rx) - deadzone) / (1.0 - deadzone));
+      result.rightStick.x = normX;
+      result.rightStick.mag = Math.abs(normX);
+    }
+  }
+
+  // Split-Arcade interpretation:
+  // Throttle = -LeftStick.Y ONLY (Stick Arriba = Avance > 0, Stick Abajo = Retroceso < 0)
+  result.throttle = -result.leftStick.y;
+
+  // Steering = RightStick.X ONLY (Stick Derecha = Giro Der > 0, Stick Izquierda = Giro Izq < 0)
+  result.steering = result.rightStick.x;
+
+  return result;
+}
+
+function updateGamepadStatusUI() {
+  const connected = getConnectedGamepadsList();
+  const gp1 = getActiveGamepad(1);
+  const gp2 = getActiveGamepad(2);
+  
+  const badge = document.getElementById('gamepadStatusBadge');
+  const text = document.getElementById('gamepadStatusText');
+  const subtext = document.getElementById('gamepadSubtext');
+  const hudBtn = document.getElementById('btnHudGamepad');
+  
+  const modalName = document.getElementById('modalGpDeviceName');
+  const modalStatus = document.getElementById('modalGpDeviceStatus');
+  const modalPill = document.getElementById('modalGpPill');
+
+  // Setup screen Gamepad badge
+  if (badge && text && subtext) {
+    if (connected.length > 0) {
+      badge.classList.remove('disconnected');
+      badge.classList.add('connected');
+      if (connected.length === 1) {
+        text.textContent = `1 Mando Conectado: ${connected[0].id.slice(0, 24)}…`;
+        subtext.textContent = `Driver 1 Activo (${gp1 ? 'Asignado' : 'Sin asignar'})`;
+      } else {
+        text.textContent = `2 Mandos Conectados (Modo Dual)`;
+        subtext.textContent = `Driver 1: Mando #1 | Driver 2: Mando #2`;
+      }
+      if (hudBtn) {
+        hudBtn.classList.add('connected');
+        hudBtn.title = `${connected.length} Mando(s) Conectado(s)`;
+      }
+    } else {
+      badge.classList.remove('connected');
+      badge.classList.add('disconnected');
+      text.textContent = 'Sin Mando Conectado';
+      subtext.textContent = 'Conecta tu mando PlayStation por USB o Bluetooth y presiona cualquier botón';
+      if (hudBtn) {
+        hudBtn.classList.remove('connected');
+        hudBtn.title = 'Configurar Mando (Desconectado)';
+      }
+    }
+  }
+
+  // Inside mapping modal for current active tab
+  if (modalName && modalStatus && modalPill) {
+    const currentGp = getActiveGamepad(activeModalDriverTab);
+    if (currentGp) {
+      modalName.textContent = `Driver ${activeModalDriverTab}: ${currentGp.id}`;
+      modalStatus.textContent = `Mando USB/Bluetooth listo (${currentGp.buttons.length} botones, ${currentGp.axes.length} ejes analógicos)`;
+      modalPill.className = 'gp-device-pill connected';
+      modalPill.textContent = 'Conectado';
+    } else {
+      modalName.textContent = `Driver ${activeModalDriverTab}: Sin mando asignado`;
+      modalStatus.textContent = 'Conecta tu mando por USB o Bluetooth y pulsa cualquier botón para activarlo.';
+      modalPill.className = 'gp-device-pill disconnected';
+      modalPill.textContent = 'Desconectado';
+    }
+  }
+}
+
+function renderGamepadModalActions() {
+  const list = document.getElementById('gpActionsList');
+  if (!list) return;
+
+  const cfg = GAMEPADS_CONFIG[activeModalDriverTab] || DEFAULT_GAMEPADS_CONFIG[activeModalDriverTab];
+
+  list.innerHTML = '';
+  GAMEPAD_ACTIONS.forEach(act => {
+    const currentBtn = (cfg.mappings && cfg.mappings[act.id] !== undefined) ? cfg.mappings[act.id] : act.defaultBtn;
+    const btnMeta = PS_BUTTONS[currentBtn] || { label: `Botón ${currentBtn}`, short: `B${currentBtn}`, css: 'ps-sys' };
+
+    const row = document.createElement('div');
+    row.className = 'gp-action-row';
+    row.innerHTML = `
+      <div class="gp-action-info">
+        <span class="gp-action-name">${act.name}</span>
+        <span class="gp-action-desc">${act.desc}</span>
+      </div>
+      <div class="gp-action-bind-controls">
+        <span class="ps-badge ${btnMeta.css}" id="badge_${act.id}">
+          ${btnMeta.label}
+        </span>
+        <button type="button" class="gp-rebind-btn ${listeningRebindAction === act.id ? 'listening' : ''}" data-action="${act.id}">
+          ${listeningRebindAction === act.id ? 'Presiona un botón...' : 'Reasignar'}
+        </button>
+      </div>
+    `;
+
+    const rebindBtn = row.querySelector('.gp-rebind-btn');
+    rebindBtn.addEventListener('click', () => {
+      if (listeningRebindAction === act.id) {
+        listeningRebindAction = null;
+        renderGamepadModalActions();
+      } else {
+        listeningRebindAction = act.id;
+        renderGamepadModalActions();
+      }
+    });
+
+    list.appendChild(row);
+  });
+}
+
+function renderGamepadTesterButtons() {
+  const grid = document.getElementById('gpButtonsGrid');
+  if (!grid) return;
+  
+  grid.innerHTML = '';
+  for (let i = 0; i <= 15; i++) {
+    const meta = PS_BUTTONS[i];
+    if (!meta) continue;
+    const el = document.createElement('div');
+    el.className = 'gp-test-badge';
+    el.id = `gp_test_btn_${i}`;
+    el.textContent = meta.short;
+    el.title = meta.label;
+    grid.appendChild(el);
+  }
+}
+
+function updateGamepadTesterLoop() {
+  const modal = document.getElementById('gamepadModal');
+  if (!modal || modal.style.display === 'none') return;
+
+  const gp = getActiveGamepad(activeModalDriverTab);
+  updateGamepadStatusUI();
+
+  if (gp) {
+    const inputs = getGamepadArcadeInputs(activeModalDriverTab);
+
+    // 1. Update Left Stick thumb (Avance / Atrás)
+    const thumbL = document.getElementById('gpStickThumbL');
+    if (thumbL && gp.axes && gp.axes.length >= 2) {
+      const ax = gp.axes[0];
+      const ay = gp.axes[1];
+      const maxOffset = 16;
+      thumbL.style.transform = `translate(${ax * maxOffset}px, ${ay * maxOffset}px)`;
+    }
+
+    // 2. Update Right Stick thumb (Giro Izq / Der)
+    const thumbR = document.getElementById('gpStickThumbR');
+    if (thumbR && gp.axes && gp.axes.length >= 4) {
+      const ax = gp.axes[2];
+      const ay = gp.axes[3];
+      const maxOffset = 16;
+      thumbR.style.transform = `translate(${ax * maxOffset}px, ${ay * maxOffset}px)`;
+    } else if (thumbR && gp.axes && gp.axes.length >= 3) {
+      const ax = gp.axes[2];
+      const maxOffset = 16;
+      thumbR.style.transform = `translate(${ax * maxOffset}px, 0px)`;
+    }
+
+    // 3. Update button badges in tester
+    if (gp.buttons) {
+      for (let i = 0; i < gp.buttons.length; i++) {
+        const testEl = document.getElementById(`gp_test_btn_${i}`);
+        const pressed = isGamepadButtonPressed(gp, i);
+        if (testEl) {
+          if (pressed) testEl.classList.add('active');
+          else testEl.classList.remove('active');
+        }
+
+        // 4. If currently in listening mode for rebind, capture first pressed button!
+        if (listeningRebindAction && pressed) {
+          GAMEPADS_CONFIG[activeModalDriverTab].mappings[listeningRebindAction] = i;
+          playSound('pickup');
+          listeningRebindAction = null;
+          renderGamepadModalActions();
+          break;
+        }
+      }
+    }
+  }
+
+  requestAnimationFrame(updateGamepadTesterLoop);
+}
+
+function openGamepadModal() {
+  const modal = document.getElementById('gamepadModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  
+  // Set tab buttons
+  document.querySelectorAll('.gp-tab-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.driver) === activeModalDriverTab);
+  });
+
+  const deviceGroup = document.getElementById('gpDeviceSelectToggle');
+  if (deviceGroup) {
+    const currentDeviceIndex = GAMEPADS_CONFIG[activeModalDriverTab].deviceIndex;
+    deviceGroup.querySelectorAll('.toggle-btn').forEach(btn => {
+      btn.classList.toggle('active', parseInt(btn.dataset.value) === currentDeviceIndex);
+    });
+  }
+
+  renderGamepadModalActions();
+  renderGamepadTesterButtons();
+  updateGamepadStatusUI();
+  requestAnimationFrame(updateGamepadTesterLoop);
+}
+
+function closeGamepadModal() {
+  const modal = document.getElementById('gamepadModal');
+  if (modal) modal.style.display = 'none';
+  listeningRebindAction = null;
+  updateGamepadStatusUI();
+}
+
+function initGamepadManager() {
+  loadGamepadConfig();
+
+  window.addEventListener('gamepadconnected', e => {
+    updateGamepadStatusUI();
+  });
+
+  window.addEventListener('gamepaddisconnected', e => {
+    updateGamepadStatusUI();
+  });
+
+  // Tab switching Driver 1 / Driver 2
+  const tabD1 = document.getElementById('gpTabDriver1');
+  const tabD2 = document.getElementById('gpTabDriver2');
+
+  const switchDriverTab = (driverNum) => {
+    activeModalDriverTab = driverNum;
+    if (tabD1) tabD1.classList.toggle('active', driverNum === 1);
+    if (tabD2) tabD2.classList.toggle('active', driverNum === 2);
+
+    const deviceGroup = document.getElementById('gpDeviceSelectToggle');
+    if (deviceGroup) {
+      const currentDeviceIndex = GAMEPADS_CONFIG[driverNum].deviceIndex;
+      deviceGroup.querySelectorAll('.toggle-btn').forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.dataset.value) === currentDeviceIndex);
+      });
+    }
+
+    listeningRebindAction = null;
+    renderGamepadModalActions();
+    updateGamepadStatusUI();
+  };
+
+  if (tabD1) tabD1.addEventListener('click', () => switchDriverTab(1));
+  if (tabD2) tabD2.addEventListener('click', () => switchDriverTab(2));
+
+  // Device assignment toggle
+  const deviceGroup = document.getElementById('gpDeviceSelectToggle');
+  if (deviceGroup) {
+    deviceGroup.querySelectorAll('.toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        deviceGroup.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        GAMEPADS_CONFIG[activeModalDriverTab].deviceIndex = parseInt(btn.dataset.value);
+        saveGamepadConfig();
+        updateGamepadStatusUI();
+      });
+    });
+  }
+
+  const openBtn = document.getElementById('openGamepadModalBtn');
+  if (openBtn) openBtn.addEventListener('click', openGamepadModal);
+
+  const hudBtn = document.getElementById('btnHudGamepad');
+  if (hudBtn) hudBtn.addEventListener('click', openGamepadModal);
+
+  const closeBtn = document.getElementById('closeGamepadModalBtn');
+  if (closeBtn) closeBtn.addEventListener('click', closeGamepadModal);
+
+  const saveBtn = document.getElementById('saveGamepadBtn');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', () => {
+      saveGamepadConfig();
+      closeGamepadModal();
+    });
+  }
+
+  const resetBtn = document.getElementById('resetGamepadBtn');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      GAMEPADS_CONFIG[activeModalDriverTab] = JSON.parse(JSON.stringify(DEFAULT_GAMEPADS_CONFIG[activeModalDriverTab]));
+      saveGamepadConfig();
+      renderGamepadModalActions();
+      const devGroup = document.getElementById('gpDeviceSelectToggle');
+      if (devGroup) {
+        devGroup.querySelectorAll('.toggle-btn').forEach(btn => {
+          btn.classList.toggle('active', parseInt(btn.dataset.value) === GAMEPADS_CONFIG[activeModalDriverTab].deviceIndex);
+        });
+      }
+      playSound('score');
+    });
+  }
+
+  updateGamepadStatusUI();
+
+  // Periodic poll to catch newly connected gamepads without event dispatch
+  setInterval(() => {
+    if (gamePhase === 'setup') {
+      updateGamepadStatusUI();
+    }
+  }, 500);
+}
+
+// ── 5. BALL SYSTEM ──────────────────────────────────────────────
+let balls = [];
+
+function initBalls() {
+  balls = [];
+  for (let i = 0; i < TOTAL_BALLS; i++) {
+    let x, y;
+    if (Math.random() < 0.6) {
+      x = 1.8 + Math.random() * 3.4;
+      y = 1.0 + Math.random() * 4.5;
+    } else {
+      x = 0.5 + Math.random() * 6.0;
+      y = 0.5 + Math.random() * 6.0;
+    }
+    const b = {
+      x: x,
+      y: y,
+      vx: 0,
+      vy: 0,
+      state: 'field',
+      owner: null,
+      targetX: 0,
+      targetY: 0,
+      targetZone: null,
+    };
+    resolveObstacleCollision(b, BALL_RADIUS_M, false);
+    balls.push(b);
+  }
+}
+
+// Spatial Hash Grid for O(N) ball lookups
+const GRID_SIZE = 0.5; // meter per cell
+let spatialGrid = {};
+
+function rebuildSpatialGrid() {
+  spatialGrid = {};
+  balls.forEach((b, idx) => {
+    if (b.state !== 'field' || b.isOutAtTop) return;
+    const gx = Math.floor(b.x / GRID_SIZE);
+    const gy = Math.floor(b.y / GRID_SIZE);
+    const key = `${gx}_${gy}`;
+    if (!spatialGrid[key]) spatialGrid[key] = [];
+    spatialGrid[key].push(idx);
+  });
+}
+
+function getNearbyBalls(rx, ry, radius) {
+  const gx1 = Math.floor((rx - radius) / GRID_SIZE);
+  const gx2 = Math.floor((rx + radius) / GRID_SIZE);
+  const gy1 = Math.floor((ry - radius) / GRID_SIZE);
+  const gy2 = Math.floor((ry + radius) / GRID_SIZE);
+
+  const results = [];
+  for (let gx = gx1; gx <= gx2; gx++) {
+    for (let gy = gy1; gy <= gy2; gy++) {
+      const key = `${gx}_${gy}`;
+      const cell = spatialGrid[key];
+      if (cell) {
+        cell.forEach(idx => {
+          const b = balls[idx];
+          const dist = Math.hypot(b.x - rx, b.y - ry);
+          if (dist <= radius) {
+            results.push(idx);
+          }
+        });
+      }
+    }
+  }
+  return results;
+}
+
+function updateBalls(dt) {
+  balls.forEach(b => {
+    if (b.state === 'field') {
+      b.x += b.vx * dt;
+      b.y += b.vy * dt;
+      b.vx *= FRICTION;
+      b.vy *= FRICTION;
+      
+      // Arena bounds bounce
+      if (b.x < BALL_RADIUS_M) { b.x = BALL_RADIUS_M; b.vx = Math.abs(b.vx) * 0.5; }
+      if (b.x > FIELD_M - BALL_RADIUS_M) { b.x = FIELD_M - BALL_RADIUS_M; b.vx = -Math.abs(b.vx) * 0.5; }
+      
+      if (b.isOutAtTop) {
+        // Constrain to the upper margin area outside the field
+        const minY = -0.55 + BALL_RADIUS_M;
+        const maxY = 0.0 - BALL_RADIUS_M;
+        if (b.y < minY) { b.y = minY; b.vy = Math.abs(b.vy) * 0.5; }
+        if (b.y > maxY) { b.y = maxY; b.vy = -Math.abs(b.vy) * 0.5; }
+      } else {
+        // Normal field bounds
+        const minY = BALL_RADIUS_M;
+        const maxY = FIELD_M - BALL_RADIUS_M;
+        if (b.y < minY) { b.y = minY; b.vy = Math.abs(b.vy) * 0.5; }
+        if (b.y > maxY) { b.y = maxY; b.vy = -Math.abs(b.vy) * 0.5; }
+        
+        resolveObstacleCollision(b, BALL_RADIUS_M, true);
+      }
+    } else if (b.state === 'flying') {
+      const dx = b.targetX - b.x;
+      const dy = b.targetY - b.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 0.15) {
+        // Arrived at Suppression unit target
+        const robot = robots.find(r => r.id === b.owner);
+        const acc = robot ? robot.specs.accuracy : 80;
+        if (Math.random() * 100 < acc) {
+          if (b.targetZone === 'supRed') {
+            b.state = 'scored_red';
+            SCORE.redSup++;
+          } else if (b.targetZone === 'supBlue') {
+            b.state = 'scored_blue';
+            SCORE.blueSup++;
+          }
+          playSound('score');
+          
+          if (robot) {
+            if (robot.isPlayer1) PLAYER_STATS.hits++;
+            else if (robot.isPlayer2) PLAYER2_STATS.hits++;
+          }
+        } else {
+          // Missed — robot shot
+          // Red splash at miss point
+          createSplash(b.targetX, b.targetY, '#ff4444');
+          
+          const isOut = Math.random() < 0.01;
+          const landX = isOut
+            ? b.targetX + (Math.random() - 0.5) * 0.3
+            : b.targetX + (Math.random() - 0.5) * 1.5;
+          const landY = isOut ? -0.15 : 0.8 + Math.random() * 0.5;
+
+          const ballIdx = balls.indexOf(b);
+
+          activeBounces.push({
+            ballIdx: ballIdx,
+            startX: b.targetX,
+            startY: b.targetY,
+            x: b.targetX,
+            y: b.targetY,
+            landX: landX,
+            landY: landY,
+            t: 0.0,
+            duration: 0.45,
+            isOut: isOut,
+            landVx: (Math.random() - 0.5) * 3,
+            landVy: isOut ? -(Math.random() * 1.5 + 1.0) : (1.5 + Math.random() * 2.0)
+          });
+          
+          b.state = 'bouncing_back';
+
+          if (robot) {
+            if (robot.isPlayer1) PLAYER_STATS.misses++;
+            else if (robot.isPlayer2) PLAYER2_STATS.misses++;
+          }
+        }
+      } else {
+        const speed = SHOOT_BALL_SPEED * dt;
+        b.x += (dx / dist) * speed;
+        b.y += (dy / dist) * speed;
+      }
+    }
+  });
+}
+
+// ── 6. ROBOT CLASS ──────────────────────────────────────────────
+class Robot {
+  constructor(id, alliance, teamNum, isPlayer) {
+    this.id = id;
+    this.alliance = alliance;
+    this.teamNum = teamNum;
+    this.isPlayer = isPlayer;
+    this.isPlayer1 = false;
+    this.isPlayer2 = false;
+    this.x = 0;
+    this.y = 0;
+    this.angle = 0;
+    this.vx = 0;
+    this.vy = 0;
+    this.inventory = [];
+    this.specs = { moveSpeed: 1.5, pickupSpeed: 2, shotSpeed: 3, capacity: 12, accuracy: 80, climbSpeed: 0.5, climbAnchorTime: 2.0 };
+    this.state = 'idle'; // 'idle' | 'moving' | 'picking' | 'shooting' | 'climbing'
+    this.pickupCooldown = 0;
+    this.shootCooldown = 0;
+    this.aiState = 'seek_balls';
+    this.aiTarget = null;
+    this.aiWait = 0;
+    this.prevX = 0;
+    this.prevY = 0;
+
+    // Linear Motion (Cámara de almacenamiento desplegable / retraíble)
+    this.hasLinearMotion = false;      // Configurable por el usuario (0 a 6 robots)
+    this.linearMotionExtended = false; // Retraído por defecto (30% capacidad)
+    this.linearMotionProgress = 0.0;   // 0.0 = retraído, 1.0 = desplegado
+    this.retractBlockedTimer = 0.0;   // Temporizador para alerta visual de bloqueo
+
+    // Escalada (Gancho de fricción y brace climb)
+    this.climberHookState = 'idle';    // 'idle' | 'raised' | 'anchoring' | 'anchored'
+    this.climberAnchorTimer = 0.0;
+    this.climbT = 0.0; // 0.0 to 1.0 along diagonal brace
+    this.isBuddy = false;
+    this.buddyOf = null;
+  }
+
+  getEffectiveCapacity() {
+    if (!this.hasLinearMotion) {
+      return this.specs.capacity; // Tolva fija convencional (100% de capacidad fija)
+    }
+    if (this.linearMotionExtended) {
+      return this.specs.capacity; // Linear Motion desplegado (100%)
+    }
+    return Math.max(1, Math.floor(this.specs.capacity * 0.3)); // Linear Motion retraído (30%)
+  }
+
+  getShootTarget() {
+    if (this.alliance === 'red') {
+      return { x: 2.2, y: 0.35, zone: 'supRed' };
+    } else {
+      return { x: 4.8, y: 0.35, zone: 'supBlue' };
+    }
+  }
+
+  getFireShieldTarget() {
+    if (this.alliance === 'red') {
+      return { x: 0.4, y: 6.4 };
+    } else {
+      return { x: 6.6, y: 6.4 };
+    }
+  }
+
+  isInShootZone() {
+    const z = this.alliance === 'red' ? ZONES.shootRedZone : ZONES.shootBlueZone;
+    const ext = this.alliance === 'red' ? ZONES.shootRedExtension : ZONES.shootBlueExtension;
+    const inMain = this.x >= z.x && this.x <= z.x + z.w && this.y >= z.y && this.y <= z.y + z.h;
+    const inExt = this.x >= ext.x && this.x <= ext.x + ext.w && this.y >= ext.y && this.y <= ext.y + ext.h;
+    return inMain || inExt;
+  }
+
+  isInFireShieldZone() {
+    const z = this.alliance === 'red' ? ZONES.fsRedZone : ZONES.fsBlueZone;
+    return this.x >= z.x && this.x <= z.x + z.w && this.y >= z.y && this.y <= z.y + z.h;
+  }
+}
+
+let robots = [];
+let playerRobot = null;
+let player2Robot = null;
+
+function initRobots() {
+  robots = [];
+  playerRobot = null;
+  player2Robot = null;
+  const pa = CONFIG.alliance;
+  const ea = pa === 'red' ? 'blue' : 'red';
+
+  const pStartX = pa === 'red' ? 0.45 : FIELD_M - 0.45;
+  const eStartX = ea === 'red' ? 0.45 : FIELD_M - 0.45;
+
+  const teamPositions = [
+    { y: FIELD_M * 0.70 },
+    { y: FIELD_M * 0.82 },
+    { y: FIELD_M * 0.94 - 0.15 },
+  ];
+
+  // Create player alliance robots
+  for (let i = 0; i < 3; i++) {
+    const isP1 = (i === CONFIG.teamNumber - 1);
+    const isP2 = (i === (CONFIG.teamNumber % 3) && CONFIG.gameMode === 2 && CONFIG.coopRelation === 'teammates');
+    const isP = isP1 || isP2;
+    
+    const r = new Robot(
+      `${pa}R${i + 1}`,
+      pa,
+      i + 1,
+      isP
+    );
+    r.isPlayer1 = isP1;
+    r.isPlayer2 = isP2;
+    r.x = pStartX;
+    r.y = teamPositions[i].y;
+    r.angle = pa === 'red' ? 0 : Math.PI;
+    resolveObstacleCollision(r, ROBOT_SIZE_M / 2, false);
+    r.prevX = r.x;
+    r.prevY = r.y;
+
+    if (isP1) {
+      r.specs = { ...CONFIG.specs };
+      playerRobot = r;
+    } else if (isP2) {
+      r.specs = { ...CONFIG.specs };
+      player2Robot = r;
+    } else {
+      r.specs = {
+        moveSpeed: CONFIG.specs.moveSpeed * CONFIG.allyMultiplier,
+        pickupSpeed: CONFIG.specs.pickupSpeed * CONFIG.allyMultiplier,
+        shotSpeed: CONFIG.specs.shotSpeed * CONFIG.allyMultiplier,
+        capacity: Math.max(3, Math.round(CONFIG.specs.capacity * CONFIG.allyMultiplier)),
+        accuracy: Math.round(CONFIG.specs.accuracy * CONFIG.allyMultiplier),
+        climbSpeed: CONFIG.specs.climbSpeed * CONFIG.allyMultiplier,
+        climbAnchorTime: CONFIG.specs.climbAnchorTime || 2.0,
+      };
+    }
+    robots.push(r);
+  }
+
+  // Create enemy alliance robots
+  for (let i = 0; i < 3; i++) {
+    const isP2 = (i === 0 && CONFIG.gameMode === 2 && CONFIG.coopRelation === 'rivals');
+    const r = new Robot(
+      `${ea}R${i + 1}`,
+      ea,
+      i + 1,
+      isP2
+    );
+    r.isPlayer2 = isP2;
+    r.x = eStartX;
+    r.y = teamPositions[i].y;
+    r.angle = ea === 'red' ? 0 : Math.PI;
+    resolveObstacleCollision(r, ROBOT_SIZE_M / 2, false);
+    r.prevX = r.x;
+    r.prevY = r.y;
+
+    if (isP2) {
+      r.specs = { ...CONFIG.specs };
+      player2Robot = r;
+    } else {
+      r.specs = {
+        moveSpeed: CONFIG.specs.moveSpeed * CONFIG.rivalMultiplier,
+        pickupSpeed: CONFIG.specs.pickupSpeed * CONFIG.rivalMultiplier,
+        shotSpeed: CONFIG.specs.shotSpeed * CONFIG.rivalMultiplier,
+        capacity: Math.max(3, Math.round(CONFIG.specs.capacity * CONFIG.rivalMultiplier)),
+        accuracy: Math.round(CONFIG.specs.accuracy * CONFIG.rivalMultiplier),
+        climbSpeed: CONFIG.specs.climbSpeed * CONFIG.rivalMultiplier,
+        climbAnchorTime: CONFIG.specs.climbAnchorTime || 2.0,
+      };
+    }
+    robots.push(r);
+  }
+
+  // Asignar Linear Motion según CONFIG.linearMotionRobots (0 a 6)
+  const linearCount = CONFIG.linearMotionRobots !== undefined ? CONFIG.linearMotionRobots : 1;
+  const prioritized = [];
+  if (playerRobot) prioritized.push(playerRobot);
+  if (player2Robot && !prioritized.includes(player2Robot)) prioritized.push(player2Robot);
+  robots.forEach(r => {
+    if (!prioritized.includes(r)) prioritized.push(r);
+  });
+
+  prioritized.forEach((r, idx) => {
+    const hasLM = idx < linearCount;
+    r.hasLinearMotion = hasLM;
+    if (hasLM) {
+      // Si es bot, inicia desplegado para usar capacidad; si es jugador, inicia retraído
+      r.linearMotionExtended = !r.isPlayer;
+      r.linearMotionProgress = r.linearMotionExtended ? 1.0 : 0.0;
+    } else {
+      r.linearMotionExtended = false;
+      r.linearMotionProgress = 0.0;
+    }
+  });
+}
+
+function inContactZone(robot) {
+  const brace = BRACES[robot.alliance];
+  const dx = robot.x - brace.startX;
+  const dy = robot.y - brace.startY;
+  return Math.sqrt(dx*dx + dy*dy) < 0.45;
+}
+
+function distanceToSegment(px, py, ax, ay, bx, by) {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return { dist: Math.hypot(px - ax, py - ay), t: 0 };
+  
+  let t = ((px - ax) * dx + (py - ay) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+  
+  const projX = ax + t * dx;
+  const projY = ay + t * dy;
+  return { dist: Math.hypot(px - projX, py - projY), t: t };
+}
+
+function inZone1(robot) {
+  const brace = BRACES[robot.alliance];
+  const ax = brace.startX;
+  const ay = brace.startY;
+  const bx = brace.startX + (brace.endX - brace.startX) * 0.33;
+  const by = brace.startY + (brace.endY - brace.startY) * 0.33;
+  
+  const res = distanceToSegment(robot.x, robot.y, ax, ay, bx, by);
+  return res.dist < 0.45 ? res.t * 0.33 : null;
+}
+
+// ── 7. PLAYER INPUT & MECHANISMS UPDATER ─────────────────────────
+function updatePlayerRobot(r, dt) {
+  if (!r || gamePhase !== 'playing') return;
+
+  const playerNum = r.isPlayer2 ? 2 : 1;
+  const sp = r.specs.moveSpeed;
+  const gpInputs = getGamepadArcadeInputs(playerNum);
+
+  // ── 1. LINEAR MOTION (Cremallera de Almacenamiento Retráctil) ──
+  if (r.hasLinearMotion) {
+    const deployKey = r.isPlayer2 ? 'i' : 'e';
+    const retractKey = r.isPlayer2 ? 'u' : 'q';
+    const gpDeploy = isGamepadActionActive('linearDeploy', playerNum);
+    const gpRetract = isGamepadActionActive('linearRetract', playerNum);
+
+    if (KEYS[deployKey] || gpDeploy) {
+      if (!r.linearMotionExtended) {
+        r.linearMotionExtended = true;
+        playSound('pickup');
+      }
+    }
+
+    if (KEYS[retractKey] || gpRetract) {
+      if (r.linearMotionExtended) {
+        const allowedRetracted = Math.max(1, Math.floor(r.specs.capacity * 0.3));
+        if (r.inventory.length > allowedRetracted) {
+          // Bloquear repliegue si hay bolas sobrantes
+          r.retractBlockedTimer = 1.8;
+          playSound('climb'); // Sonido de advertencia/buzz
+        } else {
+          r.linearMotionExtended = false;
+          playSound('pickup');
+        }
+      }
+    }
+
+    // Animar transición visual de la cremallera
+    const targetLinearProg = r.linearMotionExtended ? 1.0 : 0.0;
+    r.linearMotionProgress += (targetLinearProg - r.linearMotionProgress) * Math.min(1.0, dt * 8.0);
+    if (r.retractBlockedTimer > 0) {
+      r.retractBlockedTimer -= dt;
+    }
+  } else {
+    r.linearMotionExtended = false;
+    r.linearMotionProgress = 0.0;
+    r.retractBlockedTimer = 0.0;
+  }
+
+  // ── 2. DRIVETRAIN (Split-Arcade Drive + Keyboard) ─────────────
+  if (r.state !== 'climbing') {
+    let steer = gpInputs.steering;
+    let throttle = gpInputs.throttle;
+
+    // Controles de teclado
+    if (r.isPlayer2) {
+      if (KEYS['arrowleft']) steer = -1;
+      if (KEYS['arrowright']) steer = 1;
+      if (KEYS['arrowup']) throttle = 1;
+      if (KEYS['arrowdown']) throttle = -1;
+    } else {
+      if (KEYS['a']) steer = -1;
+      if (KEYS['d']) steer = 1;
+      if (KEYS['w']) throttle = 1;
+      if (KEYS['s']) throttle = -1;
+    }
+
+    r.prevX = r.x;
+    r.prevY = r.y;
+
+    // Giro angular (Arcade)
+    if (Math.abs(steer) > 0.01) {
+      const turnRate = 4.2; // rad/s
+      r.angle += steer * turnRate * dt;
+    }
+
+    // Avance / Retroceso en la dirección del chasis
+    if (Math.abs(throttle) > 0.01) {
+      const vx = Math.cos(r.angle) * throttle * sp;
+      const vy = Math.sin(r.angle) * throttle * sp;
+      r.x += vx * dt;
+      r.y += vy * dt;
+      r.state = 'moving';
+    } else if (Math.abs(steer) > 0.01) {
+      r.state = 'moving';
+    } else {
+      r.state = 'idle';
+    }
+
+    // Limitar dentro del campo
+    const half = ROBOT_SIZE_M / 2;
+    r.x = Math.max(half, Math.min(FIELD_M - half, r.x));
+    r.y = Math.max(half, Math.min(FIELD_M - half, r.y));
+
+    resolveObstacleCollision(r, half);
+
+    // Seguimiento de distancia recorrida
+    const dx = r.x - r.prevX;
+    const dy = r.y - r.prevY;
+    const distTravelled = Math.sqrt(dx * dx + dy * dy);
+    if (r.isPlayer1) PLAYER_STATS.distance += distTravelled;
+    else if (r.isPlayer2) PLAYER2_STATS.distance += distTravelled;
+
+    // Empujar pelotas del suelo
+    pushBallsFromRobot(r);
+  }
+
+  // ── 3. INTAKE (Recolección: ○ Círculo / Tecla B/O) ────────────
+  r.pickupCooldown = Math.max(0, r.pickupCooldown - dt);
+  const pickupKey = r.isPlayer2 ? 'o' : 'b';
+  const gpPickup = isGamepadActionActive('pickup', playerNum);
+  const maxCap = r.getEffectiveCapacity();
+
+  if ((KEYS[pickupKey] || gpPickup) && r.inventory.length < maxCap && r.pickupCooldown <= 0) {
+    const nearby = getNearbyBalls(r.x, r.y, PICKUP_RANGE_M);
+    if (nearby.length > 0) {
+      const idx = nearby[0];
+      balls[idx].state = 'held';
+      balls[idx].owner = r.id;
+      r.inventory.push(idx);
+      r.state = 'picking';
+      r.pickupCooldown = 1.0 / r.specs.pickupSpeed;
+      playSound('pickup');
+      if (r.isPlayer1) PLAYER_STATS.pickedUp++;
+      else if (r.isPlayer2) PLAYER2_STATS.pickedUp++;
+    }
+  }
+
+  // ── 4. SHOOTER (Disparo Único: ✕ Cruz / Space / Ñ) ────────────
+  r.shootCooldown = Math.max(0, r.shootCooldown - dt);
+  const shootKey = r.isPlayer2 ? 'ñ' : ' ';
+  const gpShoot = isGamepadActionActive('shoot', playerNum);
+
+  if ((KEYS[shootKey] || gpShoot) && r.inventory.length > 0 && r.shootCooldown <= 0) {
+    if (r.isInShootZone()) {
+      const ballIdx = r.inventory.shift();
+      const target = r.getShootTarget();
+      const b = balls[ballIdx];
+      b.state = 'flying';
+      b.x = r.x;
+      b.y = r.y;
+      b.targetX = target.x;
+      b.targetY = target.y;
+      b.targetZone = target.zone;
+      b.owner = r.id;
+      r.shootCooldown = 1.0 / r.specs.shotSpeed;
+      r.state = 'shooting';
+      playSound('shoot');
+      if (r.isPlayer1) PLAYER_STATS.shot++;
+      else if (r.isPlayer2) PLAYER2_STATS.shot++;
+    } else if (r.isInFireShieldZone()) {
+      const ballIdx = r.inventory.shift();
+      balls[ballIdx].state = 'held';
+      handleHumanPlayer(ballIdx, r.alliance);
+      r.shootCooldown = 1.0 / r.specs.shotSpeed;
+      if (r.isPlayer1) PLAYER_STATS.shot++;
+      else if (r.isPlayer2) PLAYER2_STATS.shot++;
+    }
+  }
+
+  // ── 5. CLIMBER HOOK WORKFLOW (Gancho de Fricción en Brace) ────
+  const inContact = inContactZone(r) || inZone1(r) !== null;
+  const hookUpKey = r.isPlayer2 ? 'k' : 'r';
+  const hookDownKey = r.isPlayer2 ? 'j' : 'f';
+  const legacyClimbKey = r.isPlayer2 ? 'p' : 'v';
+  
+  const gpHookUp = isGamepadActionActive('hookRaise', playerNum);
+  const gpHookDown = isGamepadActionActive('hookLower', playerNum);
+
+  if (r.state !== 'climbing') {
+    // 5.1 Subir gancho verticalmente al encarar el brace
+    if (inContact && (KEYS[hookUpKey] || gpHookUp)) {
+      if (r.climberHookState === 'idle') {
+        r.climberHookState = 'raised';
+        playSound('pickup');
+      }
+    }
+
+    // 5.2 Bajar gancho para hacer fricción y anclarse
+    if (inContact && (KEYS[hookDownKey] || gpHookDown || KEYS[legacyClimbKey])) {
+      if (r.climberHookState === 'raised' || r.climberHookState === 'idle') {
+        r.climberHookState = 'anchoring';
+        r.climberAnchorTimer = r.specs.climbAnchorTime || 2.0;
+        playSound('climb');
+      }
+    }
+
+    // 5.3 Proceso de anclaje con temporizador
+    if (r.climberHookState === 'anchoring') {
+      r.climberAnchorTimer -= dt;
+      if (r.climberAnchorTimer <= 0) {
+        r.climberHookState = 'anchored';
+        r.state = 'climbing';
+        const z1T = inZone1(r);
+        r.climbT = z1T !== null ? Math.max(0.05, z1T) : 0.05;
+        playSound('score');
+
+        // Auto-anclar robot de apoyo (Buddy climber) si está cerca
+        let closestAlly = null;
+        let closestDist = Infinity;
+        robots.forEach(a => {
+          if (a.id !== r.id && a.alliance === r.alliance && a.state !== 'climbing') {
+            const d = Math.hypot(a.x - r.x, a.y - r.y);
+            if (d < 0.9 && d < closestDist) {
+              closestDist = d;
+              closestAlly = a;
+            }
+          }
+        });
+
+        if (closestAlly) {
+          closestAlly.state = 'climbing';
+          closestAlly.isBuddy = true;
+          closestAlly.buddyOf = r.id;
+          closestAlly.climberHookState = 'anchored';
+          closestAlly.climbT = 0.0;
+        }
+      }
+    }
+  }
+}
+
+// ── 7.5 CLIMBING UPDATER (Avance R2 / Retroceso L2 en Rampa) ─────
+function updateClimbingRobot(r, dt) {
+  if (r.isPlayer) {
+    const playerNum = r.isPlayer2 ? 2 : 1;
+    const upKey = r.isPlayer2 ? 'arrowup' : 'w';
+    const downKey = r.isPlayer2 ? 'arrowdown' : 's';
+    const legacyClimbKey = r.isPlayer2 ? 'p' : 'v';
+    
+    const gpAdvance = isGamepadActionActive('climbAdvance', playerNum);
+    const gpReverse = isGamepadActionActive('climbReverse', playerNum);
+    const gpInputs = getGamepadArcadeInputs(playerNum);
+    
+    let climbDir = 0;
+    if (gpAdvance || KEYS[upKey] || KEYS[legacyClimbKey] || gpInputs.throttle > 0.3) {
+      climbDir = 1;
+    } else if (gpReverse || KEYS[downKey] || gpInputs.throttle < -0.3) {
+      climbDir = -1;
+    }
+    
+    if (climbDir !== 0) {
+      const brace = BRACES[r.alliance];
+      const dx = brace.endX - brace.startX;
+      const dy = brace.endY - brace.startY;
+      const len = Math.sqrt(dx*dx + dy*dy);
+      
+      let speedScale = 1.0;
+      const hasBuddy = robots.some(a => a.state === 'climbing' && a.isBuddy && a.buddyOf === r.id);
+      if (hasBuddy) speedScale = 0.55;
+
+      r.climbT = Math.max(0, Math.min(1.0, r.climbT + climbDir * (r.specs.climbSpeed / len) * dt * speedScale));
+      
+      // Desenganchar si llega al piso retrocediendo
+      if (r.climbT <= 0.001 && climbDir === -1) {
+        r.state = 'idle';
+        r.climberHookState = 'idle';
+        r.climbT = 0.0;
+        robots.forEach(a => {
+          if (a.state === 'climbing' && a.isBuddy && a.buddyOf === r.id) {
+            a.state = 'idle';
+            a.isBuddy = false;
+            a.buddyOf = null;
+            a.climberHookState = 'idle';
+            a.climbT = 0.0;
+          }
+        });
+      }
+      
+      if (performance.now() - lastClimbSoundTime > 150) {
+        playSound('climb');
+        lastClimbSoundTime = performance.now();
+      }
+    }
+  } else if (!r.isBuddy) {
+    // Bot escalando automáticamente
+    r.climberHookState = 'anchored';
+    const brace = BRACES[r.alliance];
+    const dx = brace.endX - brace.startX;
+    const dy = brace.endY - brace.startY;
+    const len = Math.sqrt(dx*dx + dy*dy);
+    
+    let speedScale = 1.0;
+    const hasBuddy = robots.some(a => a.state === 'climbing' && a.isBuddy && a.buddyOf === r.id);
+    if (hasBuddy) speedScale = 0.55;
+
+    r.climbT = Math.min(0.9, r.climbT + (r.specs.climbSpeed / len) * dt * speedScale); // bots climb to 90%
+  }
+
+  // Actualizar coordenadas físicas sobre la diagonal del brace
+  const brace = BRACES[r.alliance];
+  r.x = brace.startX + (brace.endX - brace.startX) * r.climbT;
+  r.y = brace.startY + (brace.endY - brace.startY) * r.climbT;
+  r.angle = Math.atan2(brace.endY - brace.startY, brace.endX - brace.startX);
+
+  // Arrastre del robot aliado
+  if (!r.isBuddy) {
+    robots.forEach(a => {
+      if (a.state === 'climbing' && a.isBuddy && a.buddyOf === r.id) {
+        a.climbT = Math.max(0, r.climbT - 0.15);
+        a.x = brace.startX + (brace.endX - brace.startX) * a.climbT;
+        a.y = brace.startY + (brace.endY - brace.startY) * a.climbT;
+        a.angle = r.angle;
+      }
+    });
+  }
+}
+
+// ── 8. BOT AI ────────────────────────────────────────────────────
+function updateBotAI(robot, dt) {
+  if (robot.isPlayer || gamePhase !== 'playing') return;
+  const r = robot;
+
+  // Nula Difficulty Check (If set to 0.0, bot remains idle)
+  const mult = r.alliance === CONFIG.alliance ? CONFIG.allyMultiplier : CONFIG.rivalMultiplier;
+  if (mult === 0.0) {
+    r.state = 'idle';
+    return;
+  }
+
+  r.pickupCooldown = Math.max(0, r.pickupCooldown - dt);
+  r.shootCooldown = Math.max(0, r.shootCooldown - dt);
+  r.aiWait = Math.max(0, r.aiWait - dt);
+
+  // Climbing trigger conditions
+  const fieldBallsCount = balls.filter(b => b.state === 'field' && !b.isOutAtTop).length;
+  const shouldClimb = (matchTime <= 30) || (fieldBallsCount === 0);
+
+  if (shouldClimb) {
+    r.aiState = 'seek_climb';
+  } else {
+    // If not allowed to climb, and currently trying to climb, reset
+    if (r.aiState === 'seek_climb') {
+      r.aiState = 'seek_balls';
+      r.aiTarget = null;
+    }
+    if (r.state === 'climbing') {
+      r.state = 'idle';
+      r.climbT = 0.0;
+      r.isBuddy = false;
+      r.buddyOf = null;
+    }
+  }
+
+  if (r.aiWait > 0) return;
+
+  switch (r.aiState) {
+    case 'seek_balls': {
+      if (r.inventory.length >= r.specs.capacity) {
+        r.aiState = Math.random() < 0.7 ? 'seek_suppression' : 'seek_fireshield';
+        r.aiTarget = null;
+        break;
+      }
+      const nearby = getNearbyBalls(r.x, r.y, PICKUP_RANGE_M);
+      if (nearby.length > 0 && r.pickupCooldown <= 0) {
+        const idx = nearby[0];
+        balls[idx].state = 'held';
+        balls[idx].owner = r.id;
+        r.inventory.push(idx);
+        r.pickupCooldown = 1.0 / r.specs.pickupSpeed;
+        r.state = 'picking';
+        r.aiTarget = null;
+        if (r.inventory.length >= r.specs.capacity) {
+          r.aiState = Math.random() < 0.7 ? 'seek_suppression' : 'seek_fireshield';
+        }
+        break;
+      }
+
+      let bestX = FIELD_M / 2, bestY = FIELD_M / 2;
+      const searchRange = 3.5;
+      
+      // Target lock evaluation
+      let hasValidTarget = false;
+      if (r.aiTarget !== null) {
+        if (typeof r.aiTarget === 'number') {
+          const b = balls[r.aiTarget];
+          if (b && b.state === 'field' && !b.isOutAtTop) {
+            bestX = b.x;
+            bestY = b.y;
+            hasValidTarget = true;
+          }
+        } else if (typeof r.aiTarget === 'object' && r.aiTarget !== null) {
+          const dist = Math.hypot(r.aiTarget.x - r.x, r.aiTarget.y - r.y);
+          if (dist > 0.35) {
+            bestX = r.aiTarget.x;
+            bestY = r.aiTarget.y;
+            hasValidTarget = true;
+          }
+        }
+      }
+
+      if (!hasValidTarget) {
+        r.aiTarget = null;
+        const candidates = getNearbyBalls(r.x, r.y, searchRange);
+        if (candidates.length > 0) {
+          // Avoid targeting the same ball as other allied bots
+          const otherAlliedBots = robots.filter(other => other.id !== r.id && other.alliance === r.alliance && !other.isPlayer);
+          const targetedBallIdxs = otherAlliedBots.map(other => other.aiTarget).filter(t => typeof t === 'number');
+          const availableCandidates = candidates.filter(idx => !targetedBallIdxs.includes(idx));
+          
+          let chosenIdx = -1;
+          if (availableCandidates.length > 0) {
+            let closestDist = Infinity;
+            availableCandidates.forEach(idx => {
+              const b = balls[idx];
+              const d = Math.hypot(b.x - r.x, b.y - r.y);
+              if (d < closestDist) {
+                closestDist = d;
+                chosenIdx = idx;
+              }
+            });
+          } else {
+            chosenIdx = candidates[Math.floor(Math.random() * candidates.length)];
+          }
+          
+          r.aiTarget = chosenIdx;
+          bestX = balls[chosenIdx].x;
+          bestY = balls[chosenIdx].y;
+        } else {
+          // Wander to random position
+          r.aiTarget = {
+            x: 1.0 + Math.random() * 5.0,
+            y: 1.0 + Math.random() * 5.0
+          };
+          bestX = r.aiTarget.x;
+          bestY = r.aiTarget.y;
+        }
+      }
+
+      moveToward(r, bestX, bestY, dt);
+      break;
+    }
+
+    case 'seek_suppression': {
+      const target = r.getShootTarget();
+      if (r.isInShootZone() && r.inventory.length > 0) {
+        r.aiState = 'shooting';
+      } else {
+        const driveX = r.alliance === 'red' ? 1.5 : 5.5;
+        const offset = (r.teamNum - 2) * 0.4;
+        moveToward(r, driveX, target.y + 0.5 + offset, dt);
+      }
+      break;
+    }
+
+    case 'seek_fireshield': {
+      const target = r.getFireShieldTarget();
+      if (r.isInFireShieldZone() && r.inventory.length > 0) {
+        r.aiState = 'depositing_fs';
+      } else {
+        const offset = (r.teamNum - 2) * 0.2;
+        moveToward(r, target.x + (r.alliance === 'red' ? offset : -offset), target.y, dt);
+      }
+      break;
+    }
+
+    case 'shooting': {
+      if (r.inventory.length === 0) {
+        r.aiState = 'seek_balls';
+        r.aiTarget = null;
+        r.aiWait = 0.3 + Math.random() * 0.4;
+        break;
+      }
+      if (r.shootCooldown <= 0) {
+        const ballIdx = r.inventory.shift();
+        const target = r.getShootTarget();
+        const b = balls[ballIdx];
+        b.state = 'flying';
+        b.x = r.x;
+        b.y = r.y;
+        b.targetX = target.x;
+        b.targetY = target.y;
+        b.targetZone = target.zone;
+        b.owner = r.id;
+        r.shootCooldown = 1.0 / r.specs.shotSpeed;
+        r.state = 'shooting';
+        playSound('shoot');
+      }
+      break;
+    }
+
+    case 'depositing_fs': {
+      if (r.inventory.length === 0) {
+        r.aiState = 'seek_balls';
+        r.aiTarget = null;
+        r.aiWait = 0.3 + Math.random() * 0.4;
+        break;
+      }
+      if (r.shootCooldown <= 0) {
+        const ballIdx = r.inventory.shift();
+        handleHumanPlayer(ballIdx, r.alliance);
+        r.shootCooldown = 1.0 / r.specs.shotSpeed;
+        r.state = 'shooting';
+      }
+      break;
+    }
+
+    case 'seek_climb': {
+      // Check if climbing is allowed
+      const fieldBallsCount = balls.filter(b => b.state === 'field' && !b.isOutAtTop).length;
+      const shouldClimb = (matchTime <= 30) || (fieldBallsCount === 0);
+      if (!shouldClimb) {
+        r.aiState = 'seek_balls';
+        r.aiTarget = null;
+        r.state = 'idle';
+        r.climbT = 0.0;
+        break;
+      }
+      const brace = BRACES[r.alliance];
+      const dist = Math.hypot(r.x - brace.startX, r.y - brace.startY);
+      if (dist < 0.45) {
+        r.state = 'climbing';
+        r.climbT = 0.05;
+        
+        let closestAlly = null;
+        let closestDist = Infinity;
+        robots.forEach(a => {
+          if (a.id !== r.id && a.alliance === r.alliance && a.state !== 'climbing') {
+            const d = Math.hypot(a.x - r.x, a.y - r.y);
+            if (d < 0.9 && d < closestDist) {
+              closestDist = d;
+              closestAlly = a;
+            }
+          }
+        });
+
+        if (closestAlly) {
+          closestAlly.state = 'climbing';
+          closestAlly.isBuddy = true;
+          closestAlly.buddyOf = r.id;
+          closestAlly.climbT = 0.0;
+        }
+      } else {
+        moveToward(r, brace.startX, brace.startY, dt);
+      }
+      break;
+    }
+  }
+}
+
+function moveToward(robot, tx, ty, dt) {
+  const dx = tx - robot.x;
+  const dy = ty - robot.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist < 0.1) return;
+
+  const speed = robot.specs.moveSpeed * dt;
+  robot.prevX = robot.x;
+  robot.prevY = robot.y;
+  robot.x += (dx / dist) * Math.min(speed, dist);
+  robot.y += (dy / dist) * Math.min(speed, dist);
+  robot.angle = Math.atan2(dy, dx);
+  robot.state = 'moving';
+
+  const half = ROBOT_SIZE_M / 2;
+  robot.x = Math.max(half, Math.min(FIELD_M - half, robot.x));
+  robot.y = Math.max(half, Math.min(FIELD_M - half, robot.y));
+
+  resolveObstacleCollision(robot, half);
+
+  pushBallsFromRobot(robot);
+}
+
+function pushBallsFromRobot(robot) {
+  const nearby = getNearbyBalls(robot.x, robot.y, ROBOT_SIZE_M * 0.7);
+  nearby.forEach(idx => {
+    const b = balls[idx];
+    const dx = b.x - robot.x;
+    const dy = b.y - robot.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > 0.01) {
+      const force = BALL_PUSH_FORCE / (dist + 0.1);
+      b.vx += (dx / dist) * force * 0.016;
+      b.vy += (dy / dist) * force * 0.016;
+    }
+  });
+}
+
+// ── 9. HUMAN PLAYER & THROWING ANIMATION ─────────────────────────
+let hpRedQueue = [];
+let hpBlueQueue = [];
+let hpRedTimer = 0;
+let hpBlueTimer = 0;
+
+let hpRedThrowTimer = 0;
+let hpBlueThrowTimer = 0;
+
+let activeThrows = [];
+let activeBounces = [];
+let visualSplashes = [];
+
+function handleHumanPlayer(ballIdx, alliance) {
+  if (alliance === 'red') {
+    hpRedQueue.push(ballIdx);
+  } else {
+    hpBlueQueue.push(ballIdx);
+  }
+}
+
+function updateHumanPlayers(dt) {
+  hpRedThrowTimer = Math.max(0, hpRedThrowTimer - dt);
+  hpBlueThrowTimer = Math.max(0, hpBlueThrowTimer - dt);
+
+  // Red HP
+  hpRedTimer += dt;
+  if (hpRedTimer >= (1 / HP_RATE) && hpRedQueue.length > 0) {
+    hpRedTimer = 0;
+    const idx = hpRedQueue.shift();
+    const isHit = Math.random() * 100 < CONFIG.hpAccuracy;
+    
+    const sx = -0.3;
+    const sy = 6.3;
+    const tx = 3.5;
+    const ty = 0.35;
+
+    activeThrows.push({
+      ballIdx: idx,
+      alliance: 'red',
+      startX: sx,
+      startY: sy,
+      x: sx,
+      y: sy,
+      targetX: tx,
+      targetY: ty,
+      t: 0.0,
+      isHit: isHit,
+      duration: 0.9
+    });
+
+    balls[idx].state = 'flying_hp';
+    hpRedThrowTimer = 0.45;
+  }
+
+  // Blue HP
+  hpBlueTimer += dt;
+  if (hpBlueTimer >= (1 / HP_RATE) && hpBlueQueue.length > 0) {
+    hpBlueTimer = 0;
+    const idx = hpBlueQueue.shift();
+    const isHit = Math.random() * 100 < CONFIG.hpAccuracy;
+
+    const sx = FIELD_M + 0.3;
+    const sy = 6.3;
+    const tx = 3.5;
+    const ty = 0.35;
+
+    activeThrows.push({
+      ballIdx: idx,
+      alliance: 'blue',
+      startX: sx,
+      startY: sy,
+      x: sx,
+      y: sy,
+      targetX: tx,
+      targetY: ty,
+      t: 0.0,
+      isHit: isHit,
+      duration: 0.9
+    });
+
+    balls[idx].state = 'flying_hp';
+    hpBlueThrowTimer = 0.45;
+  }
+
+  // Update active throws
+  for (let i = activeThrows.length - 1; i >= 0; i--) {
+    const th = activeThrows[i];
+    th.t += dt / th.duration;
+
+    if (th.t >= 1.0) {
+      if (th.isHit) {
+        balls[th.ballIdx].state = 'extinguished';
+        SCORE.extinguisher++;
+        playSound('extinguisher');
+        createSplash(th.targetX, th.targetY, COL.ball);
+      } else {
+        // Miss — create a bounce-back animation instead of teleporting
+        createSplash(th.targetX, th.targetY, '#ff4444'); // Red miss splash
+        playSound('shoot');
+        
+        const isOut = Math.random() < 0.01;
+        const landX = isOut
+          ? th.targetX + (Math.random() - 0.5) * 0.3
+          : th.targetX + (Math.random() - 0.5) * 1.5;
+        const landY = isOut ? -0.15 : 0.8 + Math.random() * 0.5;
+        
+        activeBounces.push({
+          ballIdx: th.ballIdx,
+          startX: th.targetX,
+          startY: th.targetY,
+          x: th.targetX,
+          y: th.targetY,
+          landX: landX,
+          landY: landY,
+          t: 0.0,
+          duration: 0.45,
+          isOut: isOut,
+          landVx: (Math.random() - 0.5) * 3,
+          landVy: isOut ? -(Math.random() * 1.5 + 1.0) : (1.5 + Math.random() * 2.0)
+        });
+        
+        balls[th.ballIdx].state = 'bouncing_back';
+      }
+      activeThrows.splice(i, 1);
+    } else {
+      const t = th.t;
+      th.x = th.startX + (th.targetX - th.startX) * t;
+      th.y = th.startY + (th.targetY - th.startY) * t - Math.sin(t * Math.PI) * 1.8;
+      
+      balls[th.ballIdx].x = th.x;
+      balls[th.ballIdx].y = th.y;
+    }
+  }
+
+  // Update active bounces (miss bounce-back animations)
+  for (let i = activeBounces.length - 1; i >= 0; i--) {
+    const bn = activeBounces[i];
+    bn.t += dt / bn.duration;
+    
+    if (bn.t >= 1.0) {
+      const b = balls[bn.ballIdx];
+      b.state = 'field';
+      b.isOutAtTop = bn.isOut;
+      b.x = bn.landX;
+      b.y = bn.landY;
+      b.vx = bn.landVx;
+      b.vy = bn.landVy;
+      activeBounces.splice(i, 1);
+    } else {
+      const t = bn.t;
+      bn.x = bn.startX + (bn.landX - bn.startX) * t;
+      bn.y = bn.startY + (bn.landY - bn.startY) * t - Math.sin(t * Math.PI) * 0.6;
+      
+      balls[bn.ballIdx].x = bn.x;
+      balls[bn.ballIdx].y = bn.y;
+    }
+  }
+
+  // Update splashes
+  for (let i = visualSplashes.length - 1; i >= 0; i--) {
+    const s = visualSplashes[i];
+    s.life -= dt;
+    if (s.life <= 0) {
+      visualSplashes.splice(i, 1);
+    } else {
+      s.particles.forEach(p => {
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+      });
+    }
+  }
+}
+
+function createSplash(x, y, color) {
+  const pList = [];
+  for (let i = 0; i < 8; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const sp = 0.5 + Math.random() * 1.5;
+    pList.push({
+      x: x,
+      y: y,
+      vx: Math.cos(angle) * sp,
+      vy: Math.sin(angle) * sp
+    });
+  }
+  visualSplashes.push({
+    particles: pList,
+    color: color,
+    life: 0.35
+  });
+}
+
+// ── 10. RENDERING ────────────────────────────────────────────────
+let gameCanvas, gameCtx;
+let setupCanvas, setupCtx;
+
+// roundRect polyfill for older browsers
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+    if (typeof r === 'number') r = { tl: r, tr: r, br: r, bl: r };
+    const radii = typeof r === 'object' ? r : { tl: r, tr: r, br: r, bl: r };
+    const rad = radii.tl || radii || 0;
+    this.moveTo(x + rad, y);
+    this.lineTo(x + w - rad, y);
+    this.quadraticCurveTo(x + w, y, x + w, y + rad);
+    this.lineTo(x + w, y + h - rad);
+    this.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
+    this.lineTo(x + rad, y + h);
+    this.quadraticCurveTo(x, y + h, x, y + h - rad);
+    this.lineTo(x, y + rad);
+    this.quadraticCurveTo(x, y, x + rad, y);
+    this.closePath();
+    return this;
+  };
+}
+
+function initCanvases() {
+  gameCanvas = document.getElementById('gameCanvas');
+  gameCtx = gameCanvas.getContext('2d');
+  setupCanvas = document.getElementById('setupCanvas');
+  setupCtx = setupCanvas ? setupCanvas.getContext('2d') : null;
+}
+
+function resizeGameCanvas() {
+  if (!gameCanvas) return;
+  const wrapper = gameCanvas.parentElement;
+  const w = wrapper.clientWidth;
+  const h = wrapper.clientHeight;
+  if (w <= 0 || h <= 0) return;
+  const size = Math.min(w, h);
+  const dpr = window.devicePixelRatio || 1;
+  gameCanvas.width = size * dpr;
+  gameCanvas.height = size * dpr;
+  gameCanvas.style.width = size + 'px';
+  gameCanvas.style.height = size + 'px';
+  gameCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function resizeSetupCanvas() {
+  if (!setupCanvas) return;
+  const wrapper = setupCanvas.parentElement;
+  const w = wrapper.clientWidth;
+  const h = wrapper.clientHeight;
+  if (w <= 0 || h <= 0) return;
+  const size = Math.min(w, h - 24);
+  const dpr = window.devicePixelRatio || 1;
+  setupCanvas.width = size * dpr;
+  setupCanvas.height = size * dpr;
+  setupCanvas.style.width = size + 'px';
+  setupCanvas.style.height = size + 'px';
+  setupCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function mToP(m, cEl) {
+  const s = S(cEl);
+  const pad = s * 0.08;
+  const fw = s - pad * 2;
+  return pad + (m / FIELD_M) * fw;
+}
+
+function sizeToP(m, cEl) {
+  const s = S(cEl);
+  const pad = s * 0.08;
+  const fw = s - pad * 2;
+  return (m / FIELD_M) * fw;
+}
+
+// Draw the static field layout on any canvas context
+function drawFieldBase(c, cEl) {
+  const s = S(cEl);
+  const pad = s * 0.08;
+  const fw = s - pad * 2;
+  c.clearRect(0, 0, s, s);
+
+  // Background
+  c.fillStyle = COL.fieldBg;
+  c.fillRect(0, 0, s, s);
+
+  // Rejilla (grid inside padded area)
+  c.strokeStyle = COL.gridLine;
+  c.lineWidth = 0.5;
+  for (let i = 0; i <= 14; i++) {
+    const p = pad + (i / 14) * fw;
+    c.beginPath(); c.moveTo(p, pad); c.lineTo(p, pad + fw); c.stroke();
+    c.beginPath(); c.moveTo(pad, p); c.lineTo(pad + fw, p); c.stroke();
+  }
+
+  // Border of the playing field
+  c.strokeStyle = 'rgba(255,255,255,0.08)';
+  c.lineWidth = 2;
+  c.strokeRect(pad, pad, fw, fw);
+
+  // Zonas de Disparo y Fire Shields
+  drawZoneCtx(c, ZONES.shootRedZone, 'rgba(232,48,72,0.04)', 'rgba(232,48,72,0.08)', cEl);
+  drawZoneCtx(c, ZONES.shootBlueZone, 'rgba(51,119,255,0.04)', 'rgba(51,119,255,0.08)', cEl);
+  drawZoneCtx(c, ZONES.shootRedExtension, 'rgba(232,48,72,0.04)', 'rgba(232,48,72,0.08)', cEl);
+  drawZoneCtx(c, ZONES.shootBlueExtension, 'rgba(51,119,255,0.04)', 'rgba(51,119,255,0.08)', cEl);
+  drawZoneCtx(c, ZONES.fsRedZone, 'rgba(232,48,72,0.03)', 'rgba(232,48,72,0.06)', cEl);
+  drawZoneCtx(c, ZONES.fsBlueZone, 'rgba(51,119,255,0.03)', 'rgba(51,119,255,0.06)', cEl);
+
+  // Contact Zone Circles
+  drawContactZoneCtx(c, 'red', cEl);
+  drawContactZoneCtx(c, 'blue', cEl);
+
+  // Suppression Units
+  drawSuppressionUnitCtx(c, ZONES.supRed, COL.supRed, 'rgba(232,48,72,0.3)', 'SUP RED', SCORE.redSup, cEl);
+  drawSuppressionUnitCtx(c, ZONES.supBlue, COL.supBlue, 'rgba(51,119,255,0.3)', 'SUP BLUE', SCORE.blueSup, cEl);
+
+  // Extinguisher
+  drawExtinguisherCtx(c, cEl);
+
+  // Compact Fire Shields
+  drawFireShieldCtx(c, ZONES.fireShieldRed, 'rgba(232,48,72,0.08)', '🛡', 'RED', cEl);
+  drawFireShieldCtx(c, ZONES.fireShieldBlue, 'rgba(51,119,255,0.08)', '🛡', 'BLUE', cEl);
+
+  // Official diagonal braces (Inverted V converging at Extinguisher)
+  drawBraceCtx(c, 'red', cEl);
+  drawBraceCtx(c, 'blue', cEl);
+}
+
+function drawZoneCtx(c, zone, fill, stroke, cEl) {
+  c.fillStyle = fill;
+  c.strokeStyle = stroke;
+  c.lineWidth = 1;
+  c.setLineDash([4, 4]);
+  c.fillRect(mToP(zone.x, cEl), mToP(zone.y, cEl), sizeToP(zone.w, cEl), sizeToP(zone.h, cEl));
+  c.strokeRect(mToP(zone.x, cEl), mToP(zone.y, cEl), sizeToP(zone.w, cEl), sizeToP(zone.h, cEl));
+  c.setLineDash([]);
+}
+
+function drawSuppressionUnitCtx(c, zone, fill, textColor, label, count, cEl) {
+  const px = mToP(zone.x, cEl);
+  const py = mToP(zone.y, cEl);
+  const pw = sizeToP(zone.w, cEl);
+  const ph = sizeToP(zone.h, cEl);
+
+  c.fillStyle = fill;
+  c.fillRect(px, py, pw, ph);
+  c.strokeStyle = textColor;
+  c.lineWidth = 2;
+  c.strokeRect(px, py, pw, ph);
+
+  c.fillStyle = textColor;
+  c.font = `bold ${S(cEl) * 0.013}px Montserrat`;
+  c.textAlign = 'center';
+  c.fillText(label, px + pw / 2, py + 16);
+
+  c.font = `bold ${S(cEl) * 0.025}px Orbitron`;
+  c.fillText(count.toString(), px + pw / 2, py + ph / 2 + 8);
+}
+
+function drawExtinguisherCtx(c, cEl) {
+  const z = ZONES.extinguisher;
+  const px = mToP(z.x, cEl);
+  const py = mToP(z.y, cEl);
+  const pw = sizeToP(z.w, cEl);
+  const ph = sizeToP(z.h, cEl);
+
+  c.fillStyle = COL.extZone;
+  c.strokeStyle = 'rgba(255,215,0,0.2)';
+  c.lineWidth = 1.5;
+  c.beginPath();
+  c.roundRect(px, py, pw, ph, 6);
+  c.fill();
+  c.stroke();
+
+  c.fillStyle = 'rgba(255,215,0,0.6)';
+  c.font = `bold ${S(cEl) * 0.012}px Montserrat`;
+  c.textAlign = 'center';
+  c.fillText('🧯 EXTINGUISHER', px + pw / 2, py + ph / 2 + 3);
+  c.font = `bold ${S(cEl) * 0.018}px Orbitron`;
+  c.fillText(SCORE.extinguisher.toString(), px + pw / 2, py + ph - 6);
+}
+
+function drawFireShieldCtx(c, zone, color, icon, label, cEl) {
+  const px = mToP(zone.x, cEl);
+  const py = mToP(zone.y, cEl);
+  const pw = sizeToP(zone.w, cEl);
+  const ph = sizeToP(zone.h, cEl);
+
+  c.fillStyle = color;
+  c.fillRect(px, py, pw, ph);
+  c.strokeStyle = color.replace('0.08', '0.2');
+  c.lineWidth = 1;
+  c.strokeRect(px, py, pw, ph);
+
+  c.fillStyle = color.replace('0.08', '0.4');
+  c.font = `${S(cEl) * 0.018}px sans-serif`;
+  c.textAlign = 'center';
+  c.fillText(icon, px + pw / 2, py + ph / 2 - 4);
+  c.font = `bold ${S(cEl) * 0.009}px Montserrat`;
+  c.fillText('FIRE SHIELD', px + pw / 2, py + ph / 2 + 12);
+}
+
+function drawBraceCtx(c, alliance, cEl) {
+  const isRed = alliance === 'red';
+  const brace = BRACES[alliance];
+  const px1 = mToP(brace.startX, cEl);
+  const py1 = mToP(brace.startY, cEl);
+  const px2 = mToP(brace.endX, cEl);
+  const py2 = mToP(brace.endY, cEl);
+  
+  // Metal tube background
+  c.strokeStyle = 'rgba(90, 100, 110, 0.4)';
+  c.lineWidth = sizeToP(0.1, cEl) || 6;
+  c.beginPath();
+  c.moveTo(px1, py1);
+  c.lineTo(px2, py2);
+  c.stroke();
+  
+  // Alliance heat shrink cover
+  c.strokeStyle = isRed ? 'rgba(232, 48, 72, 0.7)' : 'rgba(51, 119, 255, 0.7)';
+  c.lineWidth = sizeToP(0.06, cEl) || 4;
+  c.beginPath();
+  c.moveTo(px1, py1);
+  c.lineTo(px2, py2);
+  c.stroke();
+
+  // White tape ticks for zone partitions
+  const tVals = [0.33, 0.66];
+  tVals.forEach(t => {
+    const tx = brace.startX + (brace.endX - brace.startX) * t;
+    const ty = brace.startY + (brace.endY - brace.startY) * t;
+    const dx = brace.endX - brace.startX;
+    const dy = brace.endY - brace.startY;
+    const len = Math.sqrt(dx*dx + dy*dy);
+    const nx = -dy / len;
+    const ny = dx / len;
+    
+    c.strokeStyle = '#ffffff';
+    c.lineWidth = sizeToP(0.025, cEl) || 2;
+    c.beginPath();
+    c.moveTo(mToP(tx - nx * 0.12, cEl), mToP(ty - ny * 0.12, cEl));
+    c.lineTo(mToP(tx + nx * 0.12, cEl), mToP(ty + ny * 0.12, cEl));
+    c.stroke();
+  });
+  
+  // Zone labels along braces
+  c.fillStyle = 'rgba(255,255,255,0.45)';
+  c.font = `bold ${S(cEl) * 0.011}px Montserrat`;
+  c.textAlign = 'center';
+  
+  const labelT = [0.165, 0.495, 0.825];
+  const labelNames = ['ZONA 1', 'ZONA 2', 'ZONA 3'];
+  labelT.forEach((t, i) => {
+    const tx = brace.startX + (brace.endX - brace.startX) * t;
+    const ty = brace.startY + (brace.endY - brace.startY) * t;
+    c.fillText(labelNames[i], mToP(tx + (isRed ? -0.22 : 0.22), cEl), mToP(ty, cEl) + 3);
+  });
+}
+
+function drawContactZoneCtx(c, alliance, cEl) {
+  const isRed = alliance === 'red';
+  const brace = BRACES[alliance];
+  const px = mToP(brace.startX, cEl);
+  const py = mToP(brace.startY, cEl);
+  
+  c.strokeStyle = isRed ? 'rgba(232, 48, 72, 0.35)' : 'rgba(51, 119, 255, 0.35)';
+  c.fillStyle = isRed ? 'rgba(232, 48, 72, 0.05)' : 'rgba(51, 119, 255, 0.05)';
+  c.lineWidth = 1.5;
+  c.beginPath();
+  c.arc(px, py, sizeToP(0.40, cEl), 0, Math.PI * 2);
+  c.fill();
+  c.stroke();
+  
+  c.fillStyle = isRed ? 'rgba(232, 48, 72, 0.5)' : 'rgba(51, 119, 255, 0.5)';
+  c.font = `bold ${S(cEl) * 0.013}px Montserrat`;
+  c.textAlign = 'center';
+  c.fillText('C', px, py + 4);
+}
+
+function renderGame() {
+  const s = S(gameCanvas);
+  const c = gameCtx;
+  
+  // Draw basic arena layout
+  drawFieldBase(c, gameCanvas);
+
+  // Human Players (outside field)
+  drawHumanPlayer(c, 'red', gameCanvas);
+  drawHumanPlayer(c, 'blue', gameCanvas);
+
+  // Guardrails (bottom edge)
+  drawGuardrails(c, gameCanvas);
+
+  // Balls scatter
+  renderBalls(c, gameCanvas);
+
+  // Golden chain links for supported buddy robots
+  renderGoldenChains(c, gameCanvas);
+
+  // Active Human player thrown balls
+  renderHPThrownBalls(c, gameCanvas);
+
+  // Splash particles
+  renderSplashes(c, gameCanvas);
+
+  // Robots
+  renderRobots(c, gameCanvas);
+}
+
+function drawGuardrails(c, cEl) {
+  const s = S(cEl);
+  c.strokeStyle = 'rgba(255,255,255,0.12)';
+  c.lineWidth = 3;
+  c.beginPath();
+  c.moveTo(mToP(1.5, cEl), mToP(FIELD_M, cEl) - 1);
+  c.lineTo(mToP(5.5, cEl), mToP(FIELD_M, cEl) - 1);
+  c.stroke();
+  c.fillStyle = 'rgba(255,255,255,0.05)';
+  c.font = `bold ${s * 0.012}px Montserrat`;
+  c.textAlign = 'center';
+  c.fillText('GUARDRAILS', mToP(3.5, cEl), mToP(FIELD_M, cEl) - 6);
+}
+
+function drawHumanPlayer(c, alliance, cEl) {
+  const isRed = alliance === 'red';
+  const x = isRed ? -0.35 : FIELD_M + 0.35; // slightly further out to ensure it's not on the line
+  const y = 6.3;
+  const px = mToP(x, cEl);
+  const py = mToP(y, cEl);
+  
+  const queue = isRed ? hpRedQueue : hpBlueQueue;
+  const throwTimer = isRed ? hpRedThrowTimer : hpBlueThrowTimer;
+
+  const emoji = throwTimer > 0 ? '🙆‍♂️' : '🧑';
+  const sSize = S(cEl);
+
+  c.save();
+  if (throwTimer > 0) {
+    c.translate(px, py);
+    c.scale(1.25, 1.25);
+    c.translate(-px, -py);
+  }
+
+  // Draw Emoji
+  c.font = `${sSize * 0.045}px sans-serif`;
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  c.fillText(emoji, px, py);
+  c.restore();
+
+  // Draw Queue Length if any
+  if (queue.length > 0) {
+    c.fillStyle = '#ffd700';
+    c.font = `bold ${sSize * 0.014}px Orbitron`;
+    c.textAlign = 'center';
+    c.textBaseline = 'top';
+    c.fillText(`${queue.length}`, px, py + sSize * 0.03);
+  }
+
+  // Draw "HUMAN PLAYER" label above emoji
+  c.fillStyle = isRed ? 'rgba(232,48,72,0.6)' : 'rgba(51,119,255,0.6)';
+  c.font = `bold ${sSize * 0.014}px Montserrat`;
+  c.textAlign = 'center';
+  c.textBaseline = 'bottom';
+  c.fillText('HUMAN', px, py - sSize * 0.035);
+  c.fillText('PLAYER', px, py - sSize * 0.02);
+}
+
+function renderBalls(c, cEl) {
+  const ballR = Math.max(2, sizeToP(BALL_RADIUS_M, cEl));
+  balls.forEach(b => {
+    if (b.state === 'field') {
+      c.fillStyle = COL.ball;
+      c.beginPath();
+      c.arc(mToP(b.x, cEl), mToP(b.y, cEl), ballR, 0, Math.PI * 2);
+      c.fill();
+    } else if (b.state === 'flying') {
+      c.strokeStyle = 'rgba(255,179,71,0.2)';
+      c.lineWidth = 1;
+      c.setLineDash([2, 2]);
+      c.beginPath();
+      c.moveTo(mToP(b.x, cEl), mToP(b.y, cEl));
+      c.lineTo(mToP(b.targetX, cEl), mToP(b.targetY, cEl));
+      c.stroke();
+      c.setLineDash([]);
+
+      c.fillStyle = COL.ballFlying;
+      c.shadowColor = 'rgba(255,179,71,0.5)';
+      c.shadowBlur = 5;
+      c.beginPath();
+      c.arc(mToP(b.x, cEl), mToP(b.y, cEl), ballR + 1, 0, Math.PI * 2);
+      c.fill();
+      c.shadowColor = 'transparent';
+      c.shadowBlur = 0;
+    } else if (b.state === 'bouncing_back') {
+      // Miss bounce-back ball (red tinted)
+      c.fillStyle = '#ff4444';
+      c.shadowColor = 'rgba(255,68,68,0.6)';
+      c.shadowBlur = 6;
+      c.beginPath();
+      c.arc(mToP(b.x, cEl), mToP(b.y, cEl), ballR + 1, 0, Math.PI * 2);
+      c.fill();
+      c.shadowColor = 'transparent';
+      c.shadowBlur = 0;
+    }
+  });
+}
+
+function renderHPThrownBalls(c, cEl) {
+  const ballR = Math.max(2, sizeToP(BALL_RADIUS_M, cEl));
+  activeThrows.forEach(th => {
+    const sizeScale = 1.0 + Math.sin(th.t * Math.PI) * 0.9;
+    
+    c.fillStyle = COL.ballFlying;
+    c.shadowColor = 'rgba(255,179,71,0.6)';
+    c.shadowBlur = 8;
+    c.beginPath();
+    c.arc(mToP(th.x, cEl), mToP(th.y, cEl), ballR * sizeScale, 0, Math.PI * 2);
+    c.fill();
+    c.shadowColor = 'transparent';
+    c.shadowBlur = 0;
+  });
+}
+
+function renderSplashes(c, cEl) {
+  visualSplashes.forEach(s => {
+    c.fillStyle = s.color;
+    c.globalAlpha = s.life / 0.35;
+    s.particles.forEach(p => {
+      c.beginPath();
+      c.arc(mToP(p.x, cEl), mToP(p.y, cEl), 2.5, 0, Math.PI * 2);
+      c.fill();
+    });
+    c.globalAlpha = 1.0;
+  });
+}
+
+function renderGoldenChains(c, cEl) {
+  robots.forEach(a => {
+    if (a.state === 'climbing' && a.isBuddy && a.buddyOf) {
+      const climber = robots.find(r => r.id === a.buddyOf);
+      if (climber) {
+        const px1 = mToP(climber.x, cEl);
+        const py1 = mToP(climber.y, cEl);
+        const px2 = mToP(a.x, cEl);
+        const py2 = mToP(a.y, cEl);
+
+        c.strokeStyle = '#ffd700';
+        c.lineWidth = 4;
+        c.shadowColor = 'rgba(255, 215, 0, 0.45)';
+        c.shadowBlur = 6;
+        c.setLineDash([3, 3]);
+        c.beginPath();
+        c.moveTo(px1, py1);
+        c.lineTo(px2, py2);
+        c.stroke();
+        c.setLineDash([]);
+        c.shadowColor = 'transparent';
+        c.shadowBlur = 0;
+
+        c.fillStyle = '#ffd700';
+        c.font = '13px sans-serif';
+        c.textAlign = 'center';
+        c.fillText('🔗', (px1 + px2) / 2, (py1 + py2) / 2 + 5);
+      }
+    }
+  });
+}
+
+function renderRobots(c, cEl) {
+  const pa = CONFIG.alliance;
+  robots.forEach(r => {
+    const px = mToP(r.x, cEl);
+    const py = mToP(r.y, cEl);
+    const size = sizeToP(ROBOT_SIZE_M, cEl);
+    const half = size / 2;
+
+    c.save();
+    c.translate(px, py);
+
+    // 1. DIBUJO DE LA CREMALLERA TRASERA DE LINEAR MOTION
+    // Se dibuja ÚNICAMENTE si este robot tiene equipado Linear Motion y está extendiéndose
+    if (r.hasLinearMotion && r.linearMotionProgress > 0.02) {
+      c.save();
+      c.rotate(r.angle);
+      const extLen = half * 1.5 * r.linearMotionProgress; // Extensión física (~40cm)
+      const rackW = size * 0.72;
+
+      // Guías metálicas y rieles
+      c.fillStyle = '#1e293b';
+      c.strokeStyle = '#475569';
+      c.lineWidth = 1.5;
+      c.fillRect(-half - extLen, -rackW / 2, extLen, rackW);
+      c.strokeRect(-half - extLen, -rackW / 2, extLen, rackW);
+
+      // Dientes de engranaje (cremallera)
+      c.fillStyle = '#64748b';
+      const teethCount = Math.max(2, Math.floor(6 * r.linearMotionProgress));
+      for (let t = 0; t < teethCount; t++) {
+        const tx = -half - (t + 0.5) * (extLen / teethCount);
+        c.fillRect(tx - 1.5, -rackW / 2 - 2, 3, 2);
+        c.fillRect(tx - 1.5, rackW / 2, 3, 2);
+      }
+
+      // Cámara de almacenamiento expandida
+      c.fillStyle = r.alliance === 'red' ? 'rgba(232, 48, 72, 0.25)' : 'rgba(56, 189, 248, 0.25)';
+      c.strokeStyle = r.alliance === 'red' ? '#e83048' : '#38bdf8';
+      c.lineWidth = 1;
+      c.fillRect(-half - extLen + 3, -rackW / 2 + 3, Math.max(0, extLen - 6), rackW - 6);
+      c.strokeRect(-half - extLen + 3, -rackW / 2 + 3, Math.max(0, extLen - 6), rackW - 6);
+
+      // Bolitas dentro de la cámara extendida
+      if (r.inventory.length > 0) {
+        const dots = Math.min(r.inventory.length, 5);
+        c.fillStyle = COL.ball;
+        for (let d = 0; d < dots; d++) {
+          const dx = -half - 6 - (d * 5 * r.linearMotionProgress);
+          c.beginPath();
+          c.arc(dx, (d % 2 === 0 ? -4 : 4), 2.5, 0, Math.PI * 2);
+          c.fill();
+        }
+      }
+      c.restore();
+    }
+
+    // 2. RESPLANDOR Y CHASIS DEL ROBOT
+    if (r.isPlayer) {
+      c.shadowColor = r.isPlayer2 ? 'rgba(92,154,255,0.45)' : 'rgba(255,215,0,0.45)';
+      c.shadowBlur = 12;
+    }
+
+    const baseTex = r.id === `${pa}R1` ? ROBOT_IMAGES.colombia : (r.alliance === pa ? ROBOT_IMAGES.ally : ROBOT_IMAGES.rival);
+    const processedTex = r.id === `${pa}R1` ? ROBOT_TEXTURES.colombia : (r.alliance === pa ? ROBOT_TEXTURES.ally : ROBOT_TEXTURES.rival);
+    const texture = processedTex || baseTex;
+
+    if (texture && texture.complete && texture.naturalWidth > 0) {
+      c.save();
+      c.rotate(r.angle);
+      c.drawImage(texture, -half, -half, size, size);
+      c.restore();
+    } else {
+      const bodyColor = r.alliance === 'red' ? COL.redBot : COL.blueBot;
+      const lightColor = r.alliance === 'red' ? COL.redBotLight : COL.blueBotLight;
+
+      c.fillStyle = bodyColor;
+      c.beginPath();
+      c.roundRect(-half, -half, size, size, size * 0.15);
+      c.fill();
+
+      c.fillStyle = lightColor;
+      const innerSize = size * 0.5;
+      c.beginPath();
+      c.roundRect(-innerSize / 2, -innerSize / 2, innerSize, innerSize, innerSize * 0.15);
+      c.fill();
+
+      c.save();
+      c.rotate(r.angle);
+      c.fillStyle = r.isPlayer ? COL.playerHighlight : '#fff';
+      c.globalAlpha = 0.8;
+      c.beginPath();
+      c.moveTo(half + 4, 0);
+      c.lineTo(half - 4, -5);
+      c.lineTo(half - 4, 5);
+      c.closePath();
+      c.fill();
+      c.restore();
+    }
+    c.shadowColor = 'transparent';
+    c.shadowBlur = 0;
+
+    // 3. GANCHO DE ESCALADA / ESTADO DE ANCLAJE
+    if (r.climberHookState === 'raised') {
+      c.save();
+      c.rotate(r.angle);
+      // Brazo vertical de gancho extendido hacia adelante
+      c.fillStyle = '#e2e8f0';
+      c.strokeStyle = '#ffd700';
+      c.lineWidth = 2;
+      c.fillRect(half - 2, -3, 10, 6);
+      c.strokeRect(half - 2, -3, 10, 6);
+      c.fillStyle = '#ffd700';
+      c.beginPath();
+      c.arc(half + 8, 0, 3.5, 0, Math.PI * 2);
+      c.fill();
+      c.restore();
+
+      c.fillStyle = '#ffd700';
+      c.font = `bold ${Math.max(8, S(cEl) * 0.008)}px Orbitron`;
+      c.textAlign = 'center';
+      c.fillText('⚓ GANCHO ARRIBA', 0, -half - 16);
+    } else if (r.climberHookState === 'anchoring') {
+      // Dial circular con temporizador de anclaje
+      c.save();
+      c.fillStyle = 'rgba(10, 12, 20, 0.85)';
+      c.beginPath();
+      c.arc(0, -half - 20, 12, 0, Math.PI * 2);
+      c.fill();
+      c.strokeStyle = '#38bdf8';
+      c.lineWidth = 2.5;
+      const totalTime = r.specs.climbAnchorTime || 2.0;
+      const prog = 1.0 - Math.max(0, r.climberAnchorTimer / totalTime);
+      c.beginPath();
+      c.arc(0, -half - 20, 10, -Math.PI / 2, -Math.PI / 2 + prog * Math.PI * 2);
+      c.stroke();
+      c.fillStyle = '#fff';
+      c.font = `bold ${Math.max(7, S(cEl) * 0.0075)}px Orbitron`;
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText(`${r.climberAnchorTimer.toFixed(1)}s`, 0, -half - 20);
+      c.restore();
+    } else if (r.climberHookState === 'anchored' || r.state === 'climbing') {
+      c.fillStyle = '#2dd264';
+      c.font = `bold ${Math.max(8, S(cEl) * 0.008)}px Montserrat`;
+      c.textAlign = 'center';
+      c.fillText('✓ ANCLADO', 0, -half - 16);
+    }
+
+    // 4. ALERTA DE BLOQUEO DE RETRACCIÓN (Solo si tiene Linear Motion)
+    if (r.hasLinearMotion && r.retractBlockedTimer > 0) {
+      c.save();
+      c.fillStyle = 'rgba(232, 48, 72, 0.95)';
+      c.strokeStyle = '#fff';
+      c.lineWidth = 1;
+      c.beginPath();
+      c.roundRect(-60, -half - 38, 120, 18, 4);
+      c.fill();
+      c.stroke();
+      c.fillStyle = '#ffffff';
+      c.font = `bold ${Math.max(7, S(cEl) * 0.0075)}px Montserrat`;
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText('⚠️ ¡Vacía bolas para retraer!', 0, -half - 29);
+      c.restore();
+    }
+
+    // 5. BARRA DE INVENTARIO DINÁMICA
+    const effectiveCap = r.getEffectiveCapacity();
+    if (r.specs.capacity > 0 && r.state !== 'climbing') {
+      const barW = size;
+      const barH = 4;
+      const barY = -half - 8;
+      const fill = Math.min(1.0, r.inventory.length / effectiveCap);
+
+      c.fillStyle = 'rgba(0,0,0,0.5)';
+      c.fillRect(-half, barY, barW, barH);
+      c.fillStyle = fill > 0.8 ? '#e83048' : fill > 0.5 ? '#f0c040' : (r.hasLinearMotion && r.linearMotionExtended ? '#38bdf8' : '#2dd264');
+      c.fillRect(-half, barY, barW * fill, barH);
+      c.strokeStyle = 'rgba(255,255,255,0.15)';
+      c.lineWidth = 0.5;
+      c.strokeRect(-half, barY, barW, barH);
+    }
+
+    // 6. ETIQUETA DEL ROBOT
+    let label = r.isPlayer1 ? '★ TÚ' : r.isPlayer2 ? '★ P2' : r.id.slice(-2);
+    c.fillStyle = 'rgba(10,12,20,0.8)';
+    c.beginPath();
+    c.roundRect(-16, half + 2, 32, 12, 3);
+    c.fill();
+    c.fillStyle = r.isPlayer1 ? COL.playerHighlight : r.isPlayer2 ? '#5c9aff' : '#ccc';
+    c.font = `bold ${Math.max(8, S(cEl) * 0.009)}px Montserrat`;
+    c.textAlign = 'center';
+    c.textBaseline = 'alphabetic';
+    c.fillText(label, 0, half + 11);
+
+    c.restore();
+  });
+}
+
+// ── 11. SETUP PREVIEW (Unified with in-game field aesthetics) ────
+function renderSetupPreview() {
+  if (!setupCtx) return;
+  const c = setupCtx;
+  
+  // 1. Draw identical field background, braces, and zones
+  drawFieldBase(c, setupCanvas);
+
+  // 2. Draw human players (outside field)
+  drawHumanPlayer(c, 'red', setupCanvas);
+  drawHumanPlayer(c, 'blue', setupCanvas);
+
+  // 3. Draw guardrails (bottom edge)
+  drawGuardrails(c, setupCanvas);
+
+  // 4. Draw balls scatter
+  renderBalls(c, setupCanvas);
+
+  // 5. Draw robots in initial setup positions
+  renderRobots(c, setupCanvas);
+}
+
+// ── 12. GAME LOOP ────────────────────────────────────────────────
+let lastFrameTime = 0;
+let animationId = null;
+
+function gameLoop(timestamp) {
+  const dt = Math.min((timestamp - lastFrameTime) / 1000, 0.05) * timeSpeed;
+  lastFrameTime = timestamp;
+
+  if (gamePhase === 'playing') {
+    rebuildSpatialGrid();
+    
+    // Decrement matchTime
+    const prevTime = Math.ceil(matchTime);
+    matchTime = Math.max(0, matchTime - dt);
+    
+    if (Math.ceil(matchTime) !== prevTime) {
+      updateTimerDisplay();
+    }
+    
+    // Trumpet sound trigger at 30s
+    if (matchTime <= 30 && !trumpetPlayed) {
+      playSound('trumpet');
+      trumpetPlayed = true;
+    }
+
+    if (matchTime <= 0) {
+      endMatch();
+      return;
+    }
+    
+    robots.forEach(r => {
+      if (r.state === 'climbing') {
+        updateClimbingRobot(r, dt);
+      } else {
+        if (r.isPlayer) {
+          updatePlayerRobot(r, dt);
+        } else {
+          updateBotAI(r, dt);
+        }
+      }
+    });
+
+    resolveRobotCollisions();
+
+    updateBalls(dt);
+    updateHumanPlayers(dt);
+    updateHUD();
+  }
+
+  if (gamePhase === 'playing' || gamePhase === 'countdown') {
+    renderGame();
+  }
+
+  animationId = requestAnimationFrame(gameLoop);
+}
+
+function updateHUD() {
+  if (!playerRobot) return;
+  
+  // Calculate real-time regional scores with climbing multipliers and buddy points
+  const zones = {
+    redR1: getRobotZoneKey(robots.find(r => r.id === 'redR1')),
+    redR2: getRobotZoneKey(robots.find(r => r.id === 'redR2')),
+    redR3: getRobotZoneKey(robots.find(r => r.id === 'redR3')),
+    blueR1: getRobotZoneKey(robots.find(r => r.id === 'blueR1')),
+    blueR2: getRobotZoneKey(robots.find(r => r.id === 'blueR2')),
+    blueR3: getRobotZoneKey(robots.find(r => r.id === 'blueR3'))
+  };
+  
+  const redMult = 1.0 + CLIMB_VALUES[zones.redR1] + CLIMB_VALUES[zones.redR2] + CLIMB_VALUES[zones.redR3];
+  const blueMult = 1.0 + CLIMB_VALUES[zones.blueR1] + CLIMB_VALUES[zones.blueR2] + CLIMB_VALUES[zones.blueR3];
+  const redBuddies = robots.filter(r => r.alliance === 'red' && r.state === 'climbing' && r.isBuddy).length;
+  const blueBuddies = robots.filter(r => r.alliance === 'blue' && r.state === 'climbing' && r.isBuddy).length;
+  
+  const redRegional = Math.ceil(SCORE.redSup * redMult) + redBuddies * 25;
+  const blueRegional = Math.ceil(SCORE.blueSup * blueMult) + blueBuddies * 25;
+  
+  document.getElementById('gsRedScore').textContent = redRegional;
+  document.getElementById('gsBlueScore').textContent = blueRegional;
+  document.getElementById('gsExtScore').textContent = SCORE.extinguisher;
+  
+  document.getElementById('gsRedSup').textContent = SCORE.redSup;
+  document.getElementById('gsBlueSup').textContent = SCORE.blueSup;
+  document.getElementById('gsRedHPQueue').textContent = hpRedQueue.length;
+  document.getElementById('gsBlueHPQueue').textContent = hpBlueQueue.length;
+  
+  const getDiffLabel = (val) => {
+    if (val === 0.0) return 'Nula (0.0)';
+    if (val <= 0.6) return 'Básica (' + val.toFixed(2) + ')';
+    if (val <= 0.8) return 'Media (' + val.toFixed(2) + ')';
+    return 'Fuerte (' + val.toFixed(2) + ')';
+  };
+  
+  if (CONFIG.alliance === 'red') {
+    document.getElementById('gsRedBotDiff').textContent = getDiffLabel(CONFIG.allyMultiplier);
+    document.getElementById('gsBlueBotDiff').textContent = getDiffLabel(CONFIG.rivalMultiplier);
+  } else {
+    document.getElementById('gsRedBotDiff').textContent = getDiffLabel(CONFIG.rivalMultiplier);
+    document.getElementById('gsBlueBotDiff').textContent = getDiffLabel(CONFIG.allyMultiplier);
+  }
+  
+  const redR1 = robots.find(r => r.id === 'redR1');
+  const blueR1 = robots.find(r => r.id === 'blueR1');
+  const p1Header = document.getElementById('p1Header');
+  const p2Header = document.getElementById('p2Header');
+  
+  const getStatusText = (state) => {
+    if (state === 'moving') return '🏃 Moviéndose';
+    if (state === 'picking') return '⬇ Recogiendo';
+    if (state === 'shooting') return '🎯 Disparando';
+    if (state === 'climbing') return '🧗 Escalando';
+    return 'Quieto';
+  };
+
+  const getHookStatusText = (r) => {
+    if (!r) return 'Libre';
+    if (r.climberHookState === 'raised') return '⚓ Desplegado (Listo)';
+    if (r.climberHookState === 'anchoring') return `⏳ Anclando (${r.climberAnchorTimer.toFixed(1)}s)`;
+    if (r.climberHookState === 'anchored' || r.state === 'climbing') return '✓ Anclado al Brace';
+    return 'Libre';
+  };
+
+  const getLinearStatusText = (r) => {
+    if (!r) return '📦 Fijo [100%]';
+    if (!r.hasLinearMotion) return '📦 Tolva Fija [100%]';
+    return r.linearMotionExtended ? '📦 Desplegado [100%]' : '📦 Retraído [30%]';
+  };
+
+  const getInvText = (r) => {
+    if (!r) return '0 / 0';
+    if (!r.hasLinearMotion) return `${r.inventory.length} / ${r.specs.capacity}`;
+    return `${r.inventory.length} / ${r.getEffectiveCapacity()} (${r.linearMotionExtended ? '100%' : '30%'})`;
+  };
+
+  const hudRedLinearEl = document.getElementById('hudRedLinear');
+  const hudRedHookEl = document.getElementById('hudRedHook');
+  const hudBlueLinearEl = document.getElementById('hudBlueLinear');
+  const hudBlueHookEl = document.getElementById('hudBlueHook');
+
+  if (CONFIG.alliance === 'red') {
+    // Left: Player 1 (Red)
+    if (p1Header) {
+      p1Header.textContent = '👤 JUGADOR 1 (WASD / MANDO 1)';
+      p1Header.style.color = 'var(--red-light)';
+    }
+    document.getElementById('hudRedInv').textContent = getInvText(playerRobot);
+    document.getElementById('hudRedStatus').textContent = getStatusText(playerRobot.state);
+    if (hudRedLinearEl) hudRedLinearEl.textContent = getLinearStatusText(playerRobot);
+    if (hudRedHookEl) hudRedHookEl.textContent = getHookStatusText(playerRobot);
+
+    // Right: Player 2 or Rival Bot (Blue)
+    if (CONFIG.gameMode === 2 && player2Robot) {
+      if (p2Header) {
+        p2Header.textContent = CONFIG.coopRelation === 'rivals' ? '👥 JUGADOR 2 (RIVAL - MANDO 2)' : '👥 JUGADOR 2 (COMPAÑERO - MANDO 2)';
+        p2Header.style.color = CONFIG.coopRelation === 'rivals' ? 'var(--blue-light)' : 'var(--red-light)';
+      }
+      document.getElementById('hudBlueInv').textContent = getInvText(player2Robot);
+      document.getElementById('hudBlueStatus').textContent = getStatusText(player2Robot.state);
+      if (hudBlueLinearEl) hudBlueLinearEl.textContent = getLinearStatusText(player2Robot);
+      if (hudBlueHookEl) hudBlueHookEl.textContent = getHookStatusText(player2Robot);
+    } else {
+      if (p2Header) {
+        p2Header.textContent = '🤖 BOT RIVAL 1 (AUTO)';
+        p2Header.style.color = 'var(--blue-light)';
+      }
+      if (blueR1) {
+        document.getElementById('hudBlueInv').textContent = getInvText(blueR1);
+        document.getElementById('hudBlueStatus').textContent = getStatusText(blueR1.state);
+        if (hudBlueLinearEl) hudBlueLinearEl.textContent = getLinearStatusText(blueR1);
+        if (hudBlueHookEl) hudBlueHookEl.textContent = getHookStatusText(blueR1);
+      }
+    }
+  } else {
+    // Right: Player 1 (Blue)
+    if (p2Header) {
+      p2Header.textContent = '👤 JUGADOR 1 (WASD / MANDO 1)';
+      p2Header.style.color = 'var(--blue-light)';
+    }
+    document.getElementById('hudBlueInv').textContent = getInvText(playerRobot);
+    document.getElementById('hudBlueStatus').textContent = getStatusText(playerRobot.state);
+    if (hudBlueLinearEl) hudBlueLinearEl.textContent = getLinearStatusText(playerRobot);
+    if (hudBlueHookEl) hudBlueHookEl.textContent = getHookStatusText(playerRobot);
+
+    // Left: Player 2 or Rival Bot (Red)
+    if (CONFIG.gameMode === 2 && player2Robot) {
+      if (p1Header) {
+        p1Header.textContent = CONFIG.coopRelation === 'rivals' ? '👥 JUGADOR 2 (RIVAL - MANDO 2)' : '👥 JUGADOR 2 (COMPAÑERO - MANDO 2)';
+        p1Header.style.color = CONFIG.coopRelation === 'rivals' ? 'var(--red-light)' : 'var(--blue-light)';
+      }
+      document.getElementById('hudRedInv').textContent = getInvText(player2Robot);
+      document.getElementById('hudRedStatus').textContent = getStatusText(player2Robot.state);
+      if (hudRedLinearEl) hudRedLinearEl.textContent = getLinearStatusText(player2Robot);
+      if (hudRedHookEl) hudRedHookEl.textContent = getHookStatusText(player2Robot);
+    } else {
+      if (p1Header) {
+        p1Header.textContent = '🤖 BOT RIVAL 1 (AUTO)';
+        p1Header.style.color = 'var(--red-light)';
+      }
+      if (redR1) {
+        document.getElementById('hudRedInv').textContent = getInvText(redR1);
+        document.getElementById('hudRedStatus').textContent = getStatusText(redR1.state);
+        if (hudRedLinearEl) hudRedLinearEl.textContent = getLinearStatusText(redR1);
+        if (hudRedHookEl) hudRedHookEl.textContent = getHookStatusText(redR1);
+      }
+    }
+  }
+
+  const fieldCount = balls.filter(b => b.state === 'field' && !b.isOutAtTop).length;
+  document.getElementById('hudFieldBalls').textContent = fieldCount;
+}
+
+function updateTimerDisplay() {
+  const displayTime = Math.ceil(matchTime);
+  const m = Math.floor(displayTime / 60);
+  const s = displayTime % 60;
+  const display = `${m}:${s.toString().padStart(2, '0')}`;
+  const timerEl = document.getElementById('gsTimer');
+  timerEl.textContent = display;
+
+  timerEl.className = 'gs-timer';
+  if (displayTime <= 10) timerEl.classList.add('critical');
+  else if (displayTime <= 30) timerEl.classList.add('warning');
+}
+
+// ── 13. GAME FLOW ────────────────────────────────────────────────
+function startMatch() {
+  readConfigFromUI();
+
+  // Reset scores and stats
+  initBalls();
+  initRobots();
+  
+  SCORE.redSup = 0;
+  SCORE.blueSup = 0;
+  SCORE.extinguisher = 0;
+  
+  PLAYER_STATS.pickedUp = 0;
+  PLAYER_STATS.shot = 0;
+  PLAYER_STATS.hits = 0;
+  PLAYER_STATS.misses = 0;
+  PLAYER_STATS.distance = 0;
+
+  PLAYER2_STATS.pickedUp = 0;
+  PLAYER2_STATS.shot = 0;
+  PLAYER2_STATS.hits = 0;
+  PLAYER2_STATS.misses = 0;
+  PLAYER2_STATS.distance = 0;
+
+  hpRedQueue = [];
+  hpBlueQueue = [];
+  hpRedTimer = 0;
+  hpBlueTimer = 0;
+  hpRedThrowTimer = 0;
+  hpBlueThrowTimer = 0;
+  activeThrows = [];
+  activeBounces = [];
+  visualSplashes = [];
+  matchTime = MATCH_DURATION;
+  timeSpeed = 1;
+  trumpetPlayed = false;
+
+  const btnSpeedToggle = document.getElementById('btnSpeedToggle');
+  if (btnSpeedToggle) {
+    btnSpeedToggle.textContent = '⚡ 1x';
+    btnSpeedToggle.classList.remove('active-2x');
+    btnSpeedToggle.classList.remove('active-4x');
+  }
+
+  // Toggle HUD keyboard display for Player 2
+  const p2ControlsKbd = document.getElementById('p2ControlsKbd');
+  if (p2ControlsKbd) {
+    p2ControlsKbd.style.display = CONFIG.gameMode === 2 ? 'block' : 'none';
+  }
+
+  showPhase('game');
+  resizeGameCanvas();
+  updateTimerDisplay();
+
+  // Countdown Phase
+  gamePhase = 'countdown';
+  renderGame();
+  const overlay = document.getElementById('countdownOverlay');
+  const numEl = document.getElementById('countdownNumber');
+  overlay.style.display = 'flex';
+
+  let count = 3;
+  numEl.textContent = count;
+  playSound('countdown');
+
+  const countInterval = setInterval(() => {
+    count--;
+    if (count > 0) {
+      numEl.textContent = count;
+      playSound('countdown');
+    } else if (count === 0) {
+      numEl.textContent = '¡GO!';
+      numEl.style.color = '#2dd264';
+      playSound('trumpet');
+    } else {
+      clearInterval(countInterval);
+      overlay.style.display = 'none';
+      numEl.style.color = '';
+      gamePhase = 'playing';
+      startMatchTimer();
+    }
+  }, 1000);
+
+  lastFrameTime = performance.now();
+  if (animationId) cancelAnimationFrame(animationId);
+  animationId = requestAnimationFrame(gameLoop);
+}
+
+function startMatchTimer() {
+  // Timer is updated dynamically in gameLoop to support speed scaling
+  matchInterval = null;
+}
+
+function getRobotZoneKey(r) {
+  if (!r || r.state !== 'climbing') return 'none';
+  if (r.climbT > 0.66) return 'z3';
+  if (r.climbT > 0.33) return 'z2';
+  if (r.climbT > 0.05) return 'z1';
+  return 'contact';
+}
+
+function isRobotABuddy(key) {
+  const r = robots.find(bot => bot.id === key);
+  if (r && r.state === 'climbing' && r.isBuddy) {
+    return r.buddyOf.startsWith('red') ? (r.buddyOf.endsWith('1') ? 'redR1' : 'redR2') : (r.buddyOf.endsWith('1') ? 'blueR1' : 'blueR2');
+  }
+  return false;
+}
+
+function endMatch() {
+  clearInterval(matchInterval);
+  gamePhase = 'ended';
+  playSound('game_over');
+
+  const zones = {};
+  robots.forEach(r => {
+    zones[r.id] = getRobotZoneKey(r);
+  });
+
+  const pa = CONFIG.alliance;
+  const ea = pa === 'red' ? 'blue' : 'red';
+
+  // Multipliers Red
+  const redMult = 1.0 +
+    CLIMB_VALUES[zones['redR1']] +
+    CLIMB_VALUES[zones['redR2']] +
+    CLIMB_VALUES[zones['redR3']];
+
+  // Multipliers Blue
+  const blueMult = 1.0 +
+    CLIMB_VALUES[zones['blueR1']] +
+    CLIMB_VALUES[zones['blueR2']] +
+    CLIMB_VALUES[zones['blueR3']];
+
+  // Buddies score (+25 each)
+  const redBuddies = robots.filter(r => r.alliance === 'red' && r.state === 'climbing' && r.isBuddy).length;
+  const blueBuddies = robots.filter(r => r.alliance === 'blue' && r.state === 'climbing' && r.isBuddy).length;
+  
+  const redPartnerPts = redBuddies * 25;
+  const bluePartnerPts = blueBuddies * 25;
+
+  // Coopertition
+  let robotsInZ3 = 0;
+  robots.forEach(r => {
+    if (zones[r.id] === 'z3') robotsInZ3++;
+  });
+  let cooptPts = 0;
+  if (robotsInZ3 >= 6) cooptPts = 40;
+  else if (robotsInZ3 >= 5) cooptPts = 25;
+  else if (robotsInZ3 >= 4) cooptPts = 10;
+
+  const redRegional = Math.ceil(SCORE.redSup * redMult) + redPartnerPts;
+  const blueRegional = Math.ceil(SCORE.blueSup * blueMult) + bluePartnerPts;
+  const redTotal = redRegional + SCORE.extinguisher + cooptPts;
+  const blueTotal = blueRegional + SCORE.extinguisher + cooptPts;
+
+  // Display scores
+  showPhase('results');
+  document.getElementById('resultRedScore').textContent = redTotal;
+  document.getElementById('resultBlueScore').textContent = blueTotal;
+  
+  document.getElementById('rbRedSup').textContent = SCORE.redSup;
+  document.getElementById('rbRedMult').textContent = `×${redMult.toFixed(2)}`;
+  document.getElementById('rbRedRegional').textContent = redRegional;
+  
+  document.getElementById('rbBlueSup').textContent = SCORE.blueSup;
+  document.getElementById('rbBlueMult').textContent = `×${blueMult.toFixed(2)}`;
+  updateResultsStatsUI();
+
+  // Enviar telemetría de scouting a Supabase en segundo plano
+  if (typeof TelemetryService !== 'undefined' && TelemetryService.submitMatch) {
+    const finalScore = CONFIG.alliance === 'red' ? redTotal : blueTotal;
+    const playerClimbZone = playerRobot ? getRobotZoneKey(playerRobot) : 'none';
+    TelemetryService.submitMatch({
+      alliance: CONFIG.alliance,
+      gameMode: CONFIG.gameMode,
+      coopRelation: CONFIG.coopRelation,
+      specs: playerRobot ? playerRobot.specs : CONFIG.specs,
+      stats: {
+        pickedUp: PLAYER_STATS.pickedUp,
+        shot: PLAYER_STATS.shot,
+        hits: PLAYER_STATS.hits,
+        misses: PLAYER_STATS.misses,
+        distance: parseFloat(PLAYER_STATS.distance.toFixed(1))
+      },
+      scores: {
+        redSup: SCORE.redSup,
+        blueSup: SCORE.blueSup,
+        extinguisher: SCORE.extinguisher,
+        redTotal: redTotal,
+        blueTotal: blueTotal
+      },
+      finalScore: finalScore,
+      climbZone: playerClimbZone,
+      isBuddy: playerRobot ? playerRobot.isBuddy : false,
+      duration: 150
+    });
+  }
+
+  // Setup click listener on Ir a Calculadora to carry match data
+  const goCalcBtn = document.getElementById('goCalcBtn');
+  if (goCalcBtn) {
+    // Recreate listener to clear any old ones
+    const newBtn = goCalcBtn.cloneNode(true);
+    goCalcBtn.parentNode.replaceChild(newBtn, goCalcBtn);
+    newBtn.addEventListener('click', () => {
+      const matchData = {
+        redBalls: SCORE.redSup,
+        blueBalls: SCORE.blueSup,
+        extBalls: SCORE.extinguisher,
+        robots: {
+          redR1: getRobotZoneKey(robots.find(r => r.id === 'redR1')),
+          redR2: getRobotZoneKey(robots.find(r => r.id === 'redR2')),
+          redR3: getRobotZoneKey(robots.find(r => r.id === 'redR3')),
+          blueR1: getRobotZoneKey(robots.find(r => r.id === 'blueR1')),
+          blueR2: getRobotZoneKey(robots.find(r => r.id === 'blueR2')),
+          blueR3: getRobotZoneKey(robots.find(r => r.id === 'blueR3'))
+        },
+        buddies: {
+          redR2: isRobotABuddy('redR2'),
+          redR3: isRobotABuddy('redR3'),
+          blueR2: isRobotABuddy('blueR2'),
+          blueR3: isRobotABuddy('blueR3')
+        }
+      };
+      localStorage.setItem('fgc_match_result', JSON.stringify(matchData));
+      window.location.href = 'index.html';
+    });
+  }
+}
+
+function showPhase(phase) {
+  document.getElementById('setupScreen').style.display = phase === 'setup' ? 'flex' : 'none';
+  document.getElementById('gameScreen').style.display = phase === 'game' ? 'flex' : 'none';
+  document.getElementById('resultsScreen').style.display = phase === 'results' ? 'flex' : 'none';
+}
+
+function updateResultsStatsUI() {
+  const card = document.querySelector('.player-stats-card');
+  if (CONFIG.gameMode === 2 && player2Robot) {
+    const p1Shots = PLAYER_STATS.hits + PLAYER_STATS.misses;
+    const p1Acc = p1Shots > 0 ? `${Math.round(PLAYER_STATS.hits / p1Shots * 100)}%` : '—';
+    const p2Shots = PLAYER2_STATS.hits + PLAYER2_STATS.misses;
+    const p2Acc = p2Shots > 0 ? `${Math.round(PLAYER2_STATS.hits / p2Shots * 100)}%` : '—';
+
+    const p1Color = CONFIG.alliance === 'red' ? 'var(--red-light)' : 'var(--blue-light)';
+    const p2Color = CONFIG.coopRelation === 'rivals' 
+      ? (CONFIG.alliance === 'red' ? 'var(--blue-light)' : 'var(--red-light)')
+      : (CONFIG.alliance === 'red' ? 'var(--red-light)' : 'var(--blue-light)');
+      
+    const p2Label = CONFIG.coopRelation === 'rivals' ? '👥 JUGADOR 2 (RIVAL - FLECHAS)' : '👥 JUGADOR 2 (COMPAÑERO - FLECHAS)';
+
+    card.innerHTML = `
+      <h3>📊 ESTADÍSTICAS DE JUGADORES</h3>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div>
+          <h4 style="font-size: 0.72rem; color: ${p1Color}; margin-bottom: 6px; letter-spacing: 0.5px;">👤 JUGADOR 1 (WASD)</h4>
+          <div class="ps-grid" style="grid-template-columns: 1fr 1fr; gap: 6px;">
+            <div class="ps-item"><span>Pelotas Recogidas</span><strong>${PLAYER_STATS.pickedUp}</strong></div>
+            <div class="ps-item"><span>Pelotas Disparadas</span><strong>${PLAYER_STATS.shot}</strong></div>
+            <div class="ps-item"><span>Precisión Real</span><strong>${p1Acc}</strong></div>
+            <div class="ps-item"><span>Distancia</span><strong>${PLAYER_STATS.distance.toFixed(1)} m</strong></div>
+          </div>
+        </div>
+        <div>
+          <h4 style="font-size: 0.72rem; color: ${p2Color}; margin-bottom: 6px; letter-spacing: 0.5px;">${p2Label}</h4>
+          <div class="ps-grid" style="grid-template-columns: 1fr 1fr; gap: 6px;">
+            <div class="ps-item"><span>Pelotas Recogidas</span><strong>${PLAYER2_STATS.pickedUp}</strong></div>
+            <div class="ps-item"><span>Pelotas Disparadas</span><strong>${PLAYER2_STATS.shot}</strong></div>
+            <div class="ps-item"><span>Precisión Real</span><strong>${p2Acc}</strong></div>
+            <div class="ps-item"><span>Distancia</span><strong>${PLAYER2_STATS.distance.toFixed(1)} m</strong></div>
+          </div>
+        </div>
+      </div>
+    `;
+  } else {
+    const totalShots = PLAYER_STATS.hits + PLAYER_STATS.misses;
+    const p1Acc = totalShots > 0 ? `${Math.round(PLAYER_STATS.hits / totalShots * 100)}%` : '—';
+    card.innerHTML = `
+      <h3>📊 TUS ESTADÍSTICAS</h3>
+      <div class="ps-grid">
+        <div class="ps-item"><span>Pelotas Recogidas</span><strong>${PLAYER_STATS.pickedUp}</strong></div>
+        <div class="ps-item"><span>Pelotas Disparadas</span><strong>${PLAYER_STATS.shot}</strong></div>
+        <div class="ps-item"><span>Aciertos</span><strong>${PLAYER_STATS.hits}</strong></div>
+        <div class="ps-item"><span>Fallos</span><strong>${PLAYER_STATS.misses}</strong></div>
+        <div class="ps-item"><span>Precisión Real</span><strong>${p1Acc}</strong></div>
+        <div class="ps-item"><span>Distancia Recorrida</span><strong>${PLAYER_STATS.distance.toFixed(1)} m</strong></div>
+      </div>
+    `;
+  }
+}
+
+// ── 14. UI SETUP ─────────────────────────────────────────────────
+function readConfigFromUI() {
+  CONFIG.specs.moveSpeed = parseFloat(document.getElementById('moveSpeed').value);
+  CONFIG.specs.pickupSpeed = parseFloat(document.getElementById('pickupSpeed').value);
+  CONFIG.specs.shotSpeed = parseFloat(document.getElementById('shotSpeed').value);
+  CONFIG.specs.capacity = parseInt(document.getElementById('capacity').value);
+  CONFIG.specs.accuracy = parseInt(document.getElementById('accuracy').value);
+  CONFIG.specs.climbSpeed = parseFloat(document.getElementById('climbSpeed').value);
+  CONFIG.specs.climbAnchorTime = parseFloat(document.getElementById('climbAnchorTime') ? document.getElementById('climbAnchorTime').value : 2.0);
+  
+  const linearCountSlider = document.getElementById('linearRobotsCount');
+  if (linearCountSlider) {
+    CONFIG.linearMotionRobots = parseInt(linearCountSlider.value);
+  }
+  
+  CONFIG.hpAccuracy = parseInt(document.getElementById('hpAccuracy').value);
+  CONFIG.allyMultiplier = parseFloat(document.getElementById('allyDiffSlider').value);
+  CONFIG.rivalMultiplier = parseFloat(document.getElementById('rivalDiffSlider').value);
+}
+
+function initSetupUI() {
+  // Toggle groups
+  document.querySelectorAll('.toggle-group').forEach(group => {
+    group.querySelectorAll('.toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        group.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        const groupId = group.id;
+        const val = btn.dataset.value;
+
+        if (groupId === 'allianceToggle') {
+          CONFIG.alliance = val;
+          initRobots();
+        } else if (groupId === 'teamToggle') {
+          CONFIG.teamNumber = parseInt(val);
+          initRobots();
+        } else if (groupId === 'linearRobotsToggle') {
+          const v = parseInt(val);
+          CONFIG.linearMotionRobots = v;
+          const slider = document.getElementById('linearRobotsCount');
+          const valEl = document.getElementById('linearRobotsCountVal');
+          if (slider) slider.value = v;
+          if (valEl) valEl.textContent = v === 1 ? '1 robot' : `${v} robots`;
+          initRobots();
+        } else if (groupId === 'gameModeToggle') {
+          CONFIG.gameMode = parseInt(val);
+          const coopRow = document.getElementById('coopModeRow');
+          if (coopRow) {
+            coopRow.style.display = CONFIG.gameMode === 2 ? 'flex' : 'none';
+          }
+          initRobots();
+        } else if (groupId === 'coopRelationToggle') {
+          CONFIG.coopRelation = val;
+          initRobots();
+        } else if (groupId === 'allyDifficulty') {
+          const v = parseFloat(val);
+          CONFIG.allyMultiplier = v;
+          document.getElementById('allyDiffSlider').value = v;
+          document.getElementById('allyDiffVal').textContent = v.toFixed(2);
+          initRobots();
+        } else if (groupId === 'rivalDifficulty') {
+          const v = parseFloat(val);
+          CONFIG.rivalMultiplier = v;
+          document.getElementById('rivalDiffSlider').value = v;
+          document.getElementById('rivalDiffVal').textContent = v.toFixed(2);
+          initRobots();
+        }
+        renderSetupPreview();
+      });
+    });
+  });
+
+  // Linear Motion robots slider
+  const linearRobotsSlider = document.getElementById('linearRobotsCount');
+  const linearRobotsVal = document.getElementById('linearRobotsCountVal');
+  if (linearRobotsSlider && linearRobotsVal) {
+    linearRobotsSlider.addEventListener('input', () => {
+      const v = parseInt(linearRobotsSlider.value);
+      linearRobotsVal.textContent = v === 1 ? '1 robot' : `${v} robots`;
+      CONFIG.linearMotionRobots = v;
+
+      const group = document.getElementById('linearRobotsToggle');
+      if (group) {
+        group.querySelectorAll('.toggle-btn').forEach(btn => {
+          btn.classList.toggle('active', parseInt(btn.dataset.value) === v);
+        });
+      }
+      initRobots();
+      renderSetupPreview();
+    });
+  }
+
+  // Bot difficulty sliders
+  const allyDiffSlider = document.getElementById('allyDiffSlider');
+  const allyDiffVal = document.getElementById('allyDiffVal');
+  if (allyDiffSlider && allyDiffVal) {
+    allyDiffSlider.addEventListener('input', () => {
+      const v = parseFloat(allyDiffSlider.value);
+      allyDiffVal.textContent = v.toFixed(2);
+      CONFIG.allyMultiplier = v;
+      
+      const group = document.getElementById('allyDifficulty');
+      group.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
+      const matching = group.querySelector(`.toggle-btn[data-value="${v.toFixed(1)}"]`);
+      if (matching) matching.classList.add('active');
+      initRobots();
+      renderSetupPreview();
+    });
+  }
+
+  const rivalDiffSlider = document.getElementById('rivalDiffSlider');
+  const rivalDiffVal = document.getElementById('rivalDiffVal');
+  if (rivalDiffSlider && rivalDiffVal) {
+    rivalDiffSlider.addEventListener('input', () => {
+      const v = parseFloat(rivalDiffSlider.value);
+      rivalDiffVal.textContent = v.toFixed(2);
+      CONFIG.rivalMultiplier = v;
+
+      const group = document.getElementById('rivalDifficulty');
+      group.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
+      const matching = group.querySelector(`.toggle-btn[data-value="${v.toFixed(1)}"]`);
+      if (matching) matching.classList.add('active');
+      initRobots();
+      renderSetupPreview();
+    });
+  }
+
+  // Sliders mapping
+  const sliderMappings = [
+    { id: 'moveSpeed', display: 'moveSpeedVal', suffix: ' m/s', decimals: 1 },
+    { id: 'pickupSpeed', display: 'pickupSpeedVal', suffix: ' pelotas/s', decimals: 1 },
+    { id: 'shotSpeed', display: 'shotSpeedVal', suffix: ' pelotas/s', decimals: 1 },
+    { id: 'capacity', display: 'capacityVal', suffix: ' pelotas', decimals: 0 },
+    { id: 'accuracy', display: 'accuracyVal', suffix: '%', decimals: 0 },
+    { id: 'climbSpeed', display: 'climbSpeedVal', suffix: ' m/s', decimals: 1 },
+    { id: 'climbAnchorTime', display: 'climbAnchorTimeVal', suffix: ' s', decimals: 1 },
+    { id: 'hpAccuracy', display: 'hpAccuracyVal', suffix: '%', decimals: 0 },
+  ];
+
+  sliderMappings.forEach(({ id, display, suffix, decimals }) => {
+    const slider = document.getElementById(id);
+    const displayEl = document.getElementById(display);
+    if (slider && displayEl) {
+      slider.addEventListener('input', () => {
+        const v = parseFloat(slider.value);
+        displayEl.textContent = (decimals > 0 ? v.toFixed(decimals) : Math.round(v)) + suffix;
+      });
+    }
+  });
+
+  // Start button
+  document.getElementById('startMatchBtn').addEventListener('click', startMatch);
+
+  // Cloud Presets Selector & Save
+  const cloudPresetSelect = document.getElementById('cloudPresetSelect');
+  const savePresetBtn = document.getElementById('savePresetBtn');
+
+  async function refreshCloudPresets() {
+    if (!cloudPresetSelect || typeof PresetService === 'undefined') return;
+    try {
+      const presets = await PresetService.getPresets();
+      cloudPresetSelect.innerHTML = '<option value="">📋 Cargar Preset en Nube...</option>';
+      presets.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = `${SecurityUtils.sanitizeText(p.preset_name)} (${p.specs?.capacity || 12}b - ${p.specs?.moveSpeed || 1.5}m/s)`;
+        opt.dataset.specs = JSON.stringify(p.specs);
+        cloudPresetSelect.appendChild(opt);
+      });
+    } catch (e) {}
+  }
+
+  if (cloudPresetSelect) {
+    cloudPresetSelect.addEventListener('change', () => {
+      const selected = cloudPresetSelect.options[cloudPresetSelect.selectedIndex];
+      if (selected && selected.dataset.specs) {
+        try {
+          const s = JSON.parse(selected.dataset.specs);
+          if (s.moveSpeed) { document.getElementById('moveSpeed').value = s.moveSpeed; document.getElementById('moveSpeedVal').textContent = s.moveSpeed + ' m/s'; }
+          if (s.pickupSpeed) { document.getElementById('pickupSpeed').value = s.pickupSpeed; document.getElementById('pickupSpeedVal').textContent = s.pickupSpeed + ' pelotas/s'; }
+          if (s.shotSpeed) { document.getElementById('shotSpeed').value = s.shotSpeed; document.getElementById('shotSpeedVal').textContent = s.shotSpeed + ' pelotas/s'; }
+          if (s.capacity) { document.getElementById('capacity').value = s.capacity; document.getElementById('capacityVal').textContent = s.capacity + ' pelotas'; }
+          if (s.accuracy) { document.getElementById('accuracy').value = s.accuracy; document.getElementById('accuracyVal').textContent = s.accuracy + '%'; }
+          if (s.climbSpeed) { document.getElementById('climbSpeed').value = s.climbSpeed; document.getElementById('climbSpeedVal').textContent = s.climbSpeed + ' m/s'; }
+          if (s.climbAnchorTime) { document.getElementById('climbAnchorTime').value = s.climbAnchorTime; document.getElementById('climbAnchorTimeVal').textContent = s.climbAnchorTime + ' s'; }
+          readConfigFromUI();
+          initRobots();
+          renderSetupPreview();
+        } catch (e) {}
+      }
+    });
+  }
+
+  if (savePresetBtn) {
+    savePresetBtn.addEventListener('click', async () => {
+      const name = prompt("Nombre para este Preset de Robot:", "Mi Prototipo FGC");
+      if (!name) return;
+      readConfigFromUI();
+      try {
+        await PresetService.savePreset(name, CONFIG.specs);
+        alert("✓ ¡Preset guardado exitosamente en la nube!");
+        refreshCloudPresets();
+      } catch (err) {
+        alert("⚠️ " + err.message);
+      }
+    });
+  }
+
+  if (typeof AuthService !== 'undefined' && AuthService.subscribe) {
+    AuthService.subscribe(() => {
+      refreshCloudPresets();
+    });
+  }
+
+  // Play again button
+  document.getElementById('playAgainBtn').addEventListener('click', () => {
+    if (animationId) cancelAnimationFrame(animationId);
+    clearInterval(matchInterval);
+    gamePhase = 'setup';
+    showPhase('setup');
+    resizeSetupCanvas();
+    renderSetupPreview();
+  });
+
+  // Speed toggle button (1x -> 2x -> 4x -> 1x)
+  const btnSpeedToggle = document.getElementById('btnSpeedToggle');
+  if (btnSpeedToggle) {
+    btnSpeedToggle.addEventListener('click', () => {
+      if (timeSpeed === 1) {
+        timeSpeed = 2;
+        btnSpeedToggle.textContent = '⚡ 2x';
+        btnSpeedToggle.classList.remove('active-4x');
+        btnSpeedToggle.classList.add('active-2x');
+      } else if (timeSpeed === 2) {
+        timeSpeed = 4;
+        btnSpeedToggle.textContent = '⚡ 4x';
+        btnSpeedToggle.classList.remove('active-2x');
+        btnSpeedToggle.classList.add('active-4x');
+      } else {
+        timeSpeed = 1;
+        btnSpeedToggle.textContent = '⚡ 1x';
+        btnSpeedToggle.classList.remove('active-2x');
+        btnSpeedToggle.classList.remove('active-4x');
+      }
+    });
+  }
+
+  // End match button (immediate skip to results)
+  const btnEndMatch = document.getElementById('btnEndMatch');
+  if (btnEndMatch) {
+    btnEndMatch.addEventListener('click', () => {
+      if (gamePhase === 'playing' || gamePhase === 'countdown') {
+        endMatch();
+      }
+    });
+  }
+
+  // Go to calculator button
+  document.getElementById('goCalcBtn').addEventListener('click', () => {
+    window.location.href = 'index.html';
+  });
+
+  // Initialize Gamepad subsystem
+  initGamepadManager();
+}
+
+// ── 15. INITIALIZATION ───────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  initCanvases();
+  initSetupUI();
+  readConfigFromUI();
+  initBalls();
+  initRobots();
+  resizeSetupCanvas();
+  renderSetupPreview();
+});
+
+window.addEventListener('resize', () => {
+  if (gamePhase === 'playing' || gamePhase === 'countdown') {
+    resizeGameCanvas();
+  } else if (gamePhase === 'setup') {
+    resizeSetupCanvas();
+    renderSetupPreview();
+  }
+});

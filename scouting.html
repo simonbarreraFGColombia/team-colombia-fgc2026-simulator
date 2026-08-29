@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Centro de Inteligencia y Scouting FGC 2026 - Team Colombia</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Orbitron:wght@700;900&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .scouting-header {
+      background: linear-gradient(90deg, #1e0b12 0%, #0a0c14 100%);
+      border: 1px solid rgba(232, 48, 72, 0.4);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 25px;
+    }
+    .kpi-card {
+      background: #111422;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 18px;
+    }
+    .kpi-val {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 900;
+      color: #ffd700;
+      margin-top: 4px;
+    }
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 20px;
+      margin-bottom: 25px;
+    }
+    .chart-card {
+      background: #111422;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container" style="max-width: 1300px;">
+    
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="logo-area">
+        <span class="flag-stripe yellow"></span>
+        <span class="flag-stripe blue"></span>
+        <span class="flag-stripe red"></span>
+        <h1>CENTRO DE INTELIGENCIA DE SCOUTING</h1>
+      </div>
+      <nav class="nav-area">
+        <a href="index.html" class="nav-link">Portal</a>
+        <a href="simulacion.html" class="nav-link">Simulador</a>
+        <a href="estrategias.html" class="nav-link">Playbook</a>
+        <a href="scouting.html" class="nav-link active">Scouting Confidencial</a>
+      </nav>
+    </header>
+
+    <!-- Header Alert -->
+    <div class="scouting-header">
+      <div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 20px;">🕵️‍♂️</span>
+          <h2 style="margin: 0; font-family: 'Orbitron', sans-serif; color: #ff5e6f; font-size: 1.3rem;">PANEL PRIVADO DE SCOUTING • TEAM COLOMBIA</h2>
+        </div>
+        <p style="margin: 6px 0 0 0; font-size: 0.82rem; color: #94a3b8;">
+          Telemetría en tiempo real de specs, estrategias y tendencias de juego capturadas de los equipos del mundo.
+        </p>
+      </div>
+      <span class="badge" style="background: rgba(232,48,72,0.2); color: #ff5e6f; border: 1px solid rgba(232,48,72,0.4); font-weight: 700;">
+        🔒 ACCESO RESTRINGIDO
+      </span>
+    </div>
+
+    <!-- Key Metrics Grid -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <span style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase;">Partidas Simuladas Mundial</span>
+        <div class="kpi-val" id="kpiTotalMatches">142</div>
+      </div>
+      <div class="kpi-card">
+        <span style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase;">Países Rivales Activos</span>
+        <div class="kpi-val" id="kpiActiveCountries" style="color: #38bdf8;">18</div>
+      </div>
+      <div class="kpi-card">
+        <span style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase;">Récord Mundial Actual</span>
+        <div class="kpi-val" id="kpiMaxScore" style="color: #2dd264;">540 pts</div>
+      </div>
+      <div class="kpi-card">
+        <span style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase;">Adopción Linear Motion</span>
+        <div class="kpi-val" id="kpiLinearPct" style="color: #ff8c28;">68%</div>
+      </div>
+    </div>
+
+    <!-- Charts Grid -->
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h3 style="font-family: 'Orbitron', sans-serif; font-size: 0.95rem; color: #fff; margin-bottom: 12px;">📊 Curva de Preferencia de Velocidad (m/s)</h3>
+        <canvas id="speedChart" height="200"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3 style="font-family: 'Orbitron', sans-serif; font-size: 0.95rem; color: #fff; margin-bottom: 12px;">📦 Distribución de Capacidad de Tolva</h3>
+        <canvas id="capacityChart" height="200"></canvas>
+      </div>
+    </div>
+
+    <!-- Rival Strategies Playbook Viewer -->
+    <div class="card" style="margin-bottom: 25px;">
+      <div class="card-header">
+        <h3>📋 PLAYBOOKS TÁCTICOS DISEÑADOS POR PAÍSES RIVALES</h3>
+        <span class="badge">ESPIONAJE ESTRATÉGICO</span>
+      </div>
+      <div style="overflow-x: auto; margin-top: 14px;">
+        <table class="lb-table">
+          <thead>
+            <tr>
+              <th>País</th>
+              <th>Equipo</th>
+              <th>Estrategia Diseñada</th>
+              <th>Enfoque HP</th>
+              <th>Roles Alianza</th>
+              <th>Puntos Estimados</th>
+            </tr>
+          </thead>
+          <tbody id="rivalStrategiesTbody">
+            <tr>
+              <td>🇲🇽 México</td>
+              <td>Team Mexico (#142)</td>
+              <td><strong>Ciclado Rápido + Buddy Z3</strong></td>
+              <td>Extinguidor</td>
+              <td>Cycler + Extinguisher + Buddy</td>
+              <td><strong style="color: #2dd264;">490 pts</strong></td>
+            </tr>
+            <tr>
+              <td>🇩🇪 Alemania</td>
+              <td>Team Germany (#56)</td>
+              <td><strong>Defensa de Zona y Supresión</strong></td>
+              <td>Balanceado</td>
+              <td>Cycler + Defender + Climber Z3</td>
+              <td><strong style="color: #2dd264;">440 pts</strong></td>
+            </tr>
+            <tr>
+              <td>🇰🇿 Kazajistán</td>
+              <td>Team Kazakhstan (#88)</td>
+              <td><strong>Triple Escalada en Zona 3</strong></td>
+              <td>Abastecimiento Cancha</td>
+              <td>Feeder + Cycler + Buddy</td>
+              <td><strong style="color: #2dd264;">465 pts</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="supabase-client.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Speed distribution chart
+      const ctxSpeed = document.getElementById('speedChart')?.getContext('2d');
+      if (ctxSpeed) {
+        new Chart(ctxSpeed, {
+          type: 'bar',
+          data: {
+            labels: ['0.5 - 1.0 m/s', '1.1 - 1.5 m/s', '1.6 - 2.0 m/s', '2.1 - 2.5 m/s', '2.6+ m/s'],
+            datasets: [{
+              label: '% de Equipos',
+              data: [8, 38, 34, 15, 5],
+              backgroundColor: 'rgba(255, 215, 0, 0.65)',
+              borderColor: '#ffd700',
+              borderWidth: 1,
+              borderRadius: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+              x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
+            }
+          }
+        });
+      }
+
+      // Capacity distribution chart
+      const ctxCap = document.getElementById('capacityChart')?.getContext('2d');
+      if (ctxCap) {
+        new Chart(ctxCap, {
+          type: 'line',
+          data: {
+            labels: ['3-5 bolas', '6-10 bolas', '11-15 bolas', '16-25 bolas', '25+ bolas'],
+            datasets: [{
+              label: 'Equipos',
+              data: [5, 22, 48, 18, 7],
+              borderColor: '#ff5e6f',
+              backgroundColor: 'rgba(232, 48, 72, 0.15)',
+              fill: true,
+              tension: 0.35,
+              pointBackgroundColor: '#ffd700'
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+              x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
+            }
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>
